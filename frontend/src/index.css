@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* Tailwind v4 wala custom colors define karanne mehemai */
+@theme {
+  --color-cricket-blue: #0a192f;
+  --color-cricket-dark: #020c1b;
+  --color-neon-blue: #64ffda;
+  --color-cricket-gold: #ffd700;
+}
+
+body {
+  @apply bg-cricket-dark text-slate-200 font-sans;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar for next-level feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-cricket-dark); /* v4 wala var() use karanna puluwan */
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-cricket-blue);
+  border-radius: 4px;
+}
+
+/* index.css yatata meka add karanna */
+@keyframes floatUp {
+  0% { transform: translateY(100vh) scale(0); opacity: 0; }
+  50% { opacity: 0.8; }
+  100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+}
+
+.css-particle {
+  position: absolute;
+  bottom: -10%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-neon-blue) 0%, transparent 70%);
+  animation: floatUp linear infinite;
+  pointer-events: none;
+  filter: blur(8px);
+}
+
+.css-particle:nth-child(even) {
+  background: radial-gradient(circle, var(--color-cricket-gold) 0%, transparent 70%);
+}
