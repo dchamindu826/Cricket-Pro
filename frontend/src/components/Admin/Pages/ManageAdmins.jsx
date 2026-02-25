@@ -16,7 +16,7 @@ const ManageAdmins = () => {
 
   const fetchAdmins = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/users');
+      const res = await axios.get('https://cricket-pro-three.vercel.app/api/admin/users');
       setAdmins(res.data);
     } catch (error) {
       console.error("Error fetching admins");
@@ -41,13 +41,13 @@ const ManageAdmins = () => {
     try {
       if (isEditing) {
         if(!formData.password) return alert("Please enter a new password for this user.");
-        await axios.put(`http://localhost:5000/api/admin/users/${formData.id}`, {
+        await axios.put(`https://cricket-pro-three.vercel.app/api/admin/users/${formData.id}`, {
           username: formData.username,
           password: formData.password
         });
         alert("Admin updated successfully!");
       } else {
-        await axios.post('http://localhost:5000/api/admin/users', {
+        await axios.post('https://cricket-pro-three.vercel.app/api/admin/users', {
           username: formData.username,
           password: formData.password
         });
@@ -65,7 +65,7 @@ const ManageAdmins = () => {
     if (!window.confirm("Are you sure you want to delete this admin account?")) return;
     
     try {
-      await axios.delete(`http://localhost:5000/api/admin/users/${id}`);
+      await axios.delete(`https://cricket-pro-three.vercel.app/api/admin/users/${id}`);
       setAdmins(admins.filter(a => a.id !== id));
     } catch (error) {
       alert("Error deleting admin.");

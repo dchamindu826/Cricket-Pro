@@ -12,7 +12,7 @@ const Orders = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/orders'); 
+      const res = await fetch('https://cricket-pro-three.vercel.app/api/orders'); 
       const data = await res.json();
       setOrders(data || []);
     } catch (error) {
@@ -30,7 +30,7 @@ const Orders = () => {
     if(!window.confirm(`Are you sure you want to ${action} this request?`)) return;
     
     try {
-      const res = await fetch(`http://localhost:5000/api/orders/${action}/${id}`, { 
+      const res = await fetch(`https://cricket-pro-three.vercel.app/api/orders/${action}/${id}`, { 
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' }
       });

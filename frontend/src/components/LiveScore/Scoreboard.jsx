@@ -13,7 +13,7 @@ const Scoreboard = () => {
 
   useEffect(() => {
     // Record Site Visit for Realtime Traffic Dashboard
-    axios.get('http://localhost:5000/api/admin/track-visit').catch(()=>console.log("Tracking ignored"));
+    axios.get('https://cricket-pro-three.vercel.app/api/admin/track-visit').catch(()=>console.log("Tracking ignored"));
 
     const fetchLiveScore = async () => {
       try {

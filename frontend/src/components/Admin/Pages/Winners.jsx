@@ -17,7 +17,7 @@ const AdminWinners = () => {
 
   const fetchPendingWinners = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/winners/pending');
+      const response = await axios.get('https://cricket-pro-three.vercel.app/api/winners/pending');
       setPendingWinners(response.data);
       setLoading(false);
     } catch (error) {
@@ -49,7 +49,7 @@ const AdminWinners = () => {
     }
 
     try {
-      await axios.put(`http://localhost:5000/api/winners/publish/${winner.id}`, {
+      await axios.put(`https://cricket-pro-three.vercel.app/api/winners/publish/${winner.id}`, {
         name: finalName,
         prize: finalPrize,
         prize_value: Number(finalPrizeValue)
@@ -68,7 +68,7 @@ const AdminWinners = () => {
     if (!customName || !customPrize) return alert("Please fill in both name and prize!");
 
     try {
-      await axios.post('http://localhost:5000/api/winners/custom', {
+      await axios.post('https://cricket-pro-three.vercel.app/api/winners/custom', {
         name: customName,
         prize: customPrize,
         prize_value: Number(customPrizeValue || 0)

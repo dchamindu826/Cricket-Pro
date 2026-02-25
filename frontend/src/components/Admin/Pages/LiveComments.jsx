@@ -13,11 +13,11 @@ const LiveComments = () => {
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const postRes = await axios.get('http://localhost:5000/api/posts/active');
+        const postRes = await axios.get('https://cricket-pro-three.vercel.app/api/posts/active');
         setActivePost(postRes.data);
 
         if (postRes.data && postRes.data.id) {
-          const commentsRes = await axios.get(`http://localhost:5000/api/comments/${postRes.data.id}`);
+          const commentsRes = await axios.get(`https://cricket-pro-three.vercel.app/api/comments/${postRes.data.id}`);
           setComments(commentsRes.data || []);
         }
         setLoading(false);
@@ -45,7 +45,7 @@ const LiveComments = () => {
     
     try {
       await Promise.all(selectedComments.map(id => 
-          axios.put(`http://localhost:5000/api/comments/winner/${id}`)
+          axios.put(`https://cricket-pro-three.vercel.app/api/comments/winner/${id}`)
       ));
       
       alert('Selected users marked as Winners!');
@@ -59,7 +59,7 @@ const LiveComments = () => {
   // Unmark Winner (Single) 
   const unmarkWinner = async (commentId) => {
     try {
-      await axios.put(`http://localhost:5000/api/comments/unmark-winner/${commentId}`);
+      await axios.put(`https://cricket-pro-three.vercel.app/api/comments/unmark-winner/${commentId}`);
       setComments(comments.map(c => c.id === commentId ? { ...c, is_winner: false } : c));
       alert('Winner status removed.');
     } catch (err) {
@@ -71,7 +71,7 @@ const LiveComments = () => {
   const deleteComment = async (commentId) => {
     if(!window.confirm("Are you sure you want to delete this comment?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/comments/${commentId}`);
+      await axios.delete(`https://cricket-pro-three.vercel.app/api/comments/${commentId}`);
       setComments(comments.filter(c => c.id !== commentId));
       setSelectedComments(selectedComments.filter(id => id !== commentId));
     } catch (err) {

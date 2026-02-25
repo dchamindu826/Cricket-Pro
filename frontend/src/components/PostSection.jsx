@@ -13,13 +13,13 @@ const PostSection = () => {
 
   const fetchPostAndComments = async () => {
     try {
-      const postRes = await fetch('http://localhost:5000/api/posts/active');
+      const postRes = await fetch('https://cricket-pro-three.vercel.app/api/posts/active');
       const currentPost = await postRes.json();
       
       if (currentPost && currentPost.id) {
           setActivePost(currentPost);
 
-          const commentRes = await fetch(`http://localhost:5000/api/comments/${currentPost.id}`);
+          const commentRes = await fetch(`https://cricket-pro-three.vercel.app/api/comments/${currentPost.id}`);
           const commentData = await commentRes.json();
           
           if (Array.isArray(commentData)) {
@@ -83,7 +83,7 @@ const PostSection = () => {
       };
 
       try {
-          const response = await fetch('http://localhost:5000/api/comments/add', {
+          const response = await fetch('https://cricket-pro-three.vercel.app/api/comments/add', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(commentData)

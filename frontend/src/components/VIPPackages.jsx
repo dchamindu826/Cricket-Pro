@@ -50,7 +50,7 @@ const VIPPackages = () => {
   useEffect(() => {
     const fetchPackages = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/packages');
+        const res = await fetch('https://cricket-pro-three.vercel.app/api/packages');
         const data = await res.json();
         // Backend එකෙන් array එකක් ආවොත් විතරක් set කරනවා, නැත්නම් හිස් array එකක් දානවා (Crash වෙන එක නවත්වන්න)
         if (Array.isArray(data)) {
@@ -110,7 +110,7 @@ const VIPPackages = () => {
     formData.append('packageName', selectedPackage.name);
 
     try {
-        const response = await fetch('http://localhost:5000/api/orders/create', {
+        const response = await fetch('https://cricket-pro-three.vercel.app/api/orders/create', {
             method: 'POST',
             body: formData
         });

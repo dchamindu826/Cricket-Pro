@@ -19,13 +19,13 @@ const ManagePosts = () => {
     const fetchPostsData = async () => {
       try {
         // 1. Fetch Active Post
-        const activeRes = await axios.get('http://localhost:5000/api/posts/active');
+        const activeRes = await axios.get('https://cricket-pro-three.vercel.app/api/posts/active');
         setActivePost(activeRes.data);
 
         // 2. Fetch Comments if active post exists (Make sure commentRoutes is working backend)
         if (activeRes.data && activeRes.data.id) {
           try {
-             const commentsRes = await axios.get(`http://localhost:5000/api/comments/${activeRes.data.id}`);
+             const commentsRes = await axios.get(`https://cricket-pro-three.vercel.app/api/comments/${activeRes.data.id}`);
              setComments(commentsRes.data || []);
           } catch(err) {
              console.log("No comments or route error", err);
@@ -33,7 +33,7 @@ const ManagePosts = () => {
         }
 
         // 3. Fetch Previous Posts
-        const historyRes = await axios.get('http://localhost:5000/api/posts/history');
+        const historyRes = await axios.get('https://cricket-pro-three.vercel.app/api/posts/history');
         setPreviousPosts(historyRes.data || []);
 
         setLoading(false);
@@ -78,7 +78,7 @@ const ManagePosts = () => {
     formData.append('prizes', JSON.stringify(prizes));
 
     try {
-      await axios.post('http://localhost:5000/api/posts/create', formData, {
+      await axios.post('https://cricket-pro-three.vercel.app/api/posts/create', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       alert('New post created successfully!');
@@ -94,7 +94,7 @@ const ManagePosts = () => {
     if(!window.confirm("Are you sure you want to delete the active post?")) return;
     try {
       // Supabase uses 'id' not '_id'
-      await axios.delete(`http://localhost:5000/api/posts/${activePost.id}`);
+      await axios.delete(`https://cricket-pro-three.vercel.app/api/posts/${activePost.id}`);
       setActivePost(null);
       setComments([]);
       alert('Post deleted!');

@@ -21,13 +21,13 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const statsRes = await axios.get('http://localhost:5000/api/admin/dashboard-stats');
+        const statsRes = await axios.get('https://cricket-pro-three.vercel.app/api/admin/dashboard-stats');
         setStats(statsRes.data);
 
-        const chartRes = await axios.get('http://localhost:5000/api/admin/revenue-chart');
+        const chartRes = await axios.get('https://cricket-pro-three.vercel.app/api/admin/revenue-chart');
         setRevenueData(chartRes.data);
 
-        const linkRes = await axios.get('http://localhost:5000/api/admin/live-stream');
+        const linkRes = await axios.get('https://cricket-pro-three.vercel.app/api/admin/live-stream');
         setYtLink(linkRes.data.url);
         
         setLoading(false);
@@ -45,7 +45,7 @@ const Dashboard = () => {
   const handleUpdateStream = async () => {
     setIsUpdatingLink(true);
     try {
-      await axios.post('http://localhost:5000/api/admin/live-stream', { url: ytLink });
+      await axios.post('https://cricket-pro-three.vercel.app/api/admin/live-stream', { url: ytLink });
       alert('Live stream link updated successfully!');
     } catch (error) {
       alert('Failed to update link');

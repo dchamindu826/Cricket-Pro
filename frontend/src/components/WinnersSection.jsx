@@ -18,7 +18,7 @@ const WinnersSection = () => {
   useEffect(() => {
     const fetchPublishedWinners = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/winners/published');
+        const response = await axios.get('https://cricket-pro-three.vercel.app/api/winners/published');
         setWinners(response.data);
         setLoading(false);
       } catch (err) {

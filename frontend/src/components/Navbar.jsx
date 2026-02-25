@@ -18,7 +18,7 @@ const Navbar = () => {
       if (currentUser && currentUser.email) {
           try {
               // මේ route එකෙන් admin approve කරපු active order එකක් තියෙනවද බලනවා
-              const response = await axios.get(`http://localhost:5000/api/orders/check-vip/${currentUser.email}`);
+              const response = await axios.get(`https://cricket-pro-three.vercel.app/api/orders/check-vip/${currentUser.email}`);
               if (response.data.isVip) {
                   setIsVip(true);
               } else {

@@ -12,7 +12,7 @@ const VIPPackages = () => {
   // Fetch Packages from DB
   const fetchPackages = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/packages');
+      const res = await fetch('https://cricket-pro-three.vercel.app/api/packages');
       const data = await res.json();
       setPackages(data);
     } catch (error) {
@@ -44,7 +44,7 @@ const VIPPackages = () => {
     setLoading(true);
     
     try {
-      const res = await fetch('http://localhost:5000/api/packages/create', { 
+      const res = await fetch('https://cricket-pro-three.vercel.app/api/packages/create', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, price, features: featuresList })
@@ -66,7 +66,7 @@ const VIPPackages = () => {
   const handleDelete = async (id) => {
      if(!window.confirm("Are you sure you want to delete this package?")) return;
      try {
-       const res = await fetch(`http://localhost:5000/api/packages/${id}`, { method: 'DELETE' });
+       const res = await fetch(`https://cricket-pro-three.vercel.app/api/packages/${id}`, { method: 'DELETE' });
        const data = await res.json();
        if(data.success) {
          setPackages(packages.filter(p => p.id !== id));
