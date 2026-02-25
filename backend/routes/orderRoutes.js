@@ -14,7 +14,6 @@ router.post('/create', upload.single('slipImage'), async (req, res) => {
 
     if (!file) return res.status(400).json({ success: false, message: 'Payment slip is required' });
 
-    // 1. Upload Slip to Supabase Storage ('payment-slips' bucket)
     const fileName = `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
     
     const { error: storageError } = await supabase
@@ -27,10 +26,9 @@ router.post('/create', upload.single('slipImage'), async (req, res) => {
     const { data: publicUrlData } = supabase.storage.from('payment-slips').getPublicUrl(fileName);
     const slipUrl = publicUrlData.publicUrl;
 
-    // 2. Save Order to Database
     const { error: dbError } = await supabase
       .from('vip_orders')
-      .insert([{ user_name: userName, user_email: userEmail, package_name: packageName, slip_url: slipUrl }]);
+      .insert([{ user_name: userName, user_email: userEmail, package_name: packageName, slip_url: slipUrl, status: 'pending' }]);
 
     if (dbError) throw dbError;
 
@@ -39,6 +37,21 @@ router.post('/create', upload.single('slipImage'), async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+// GET endpoint - Fetch ALL VIP orders
+router.get('/', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('vip_orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
@@ -58,6 +71,28 @@ router.get('/pending', async (req, res) => {
   }
 });
 
+// GET endpoint - Check VIP status (Navbar එකට)
+router.get('/check-vip/:email', async (req, res) => {
+  try {
+    const email = req.params.email;
+    const { data, error } = await supabase
+      .from('vip_orders')
+      .select('*')
+      .eq('user_email', email)
+      .eq('status', 'approved'); 
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      res.json({ isVip: true }); 
+    } else {
+      res.json({ isVip: false }); 
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ isVip: false });
+  }
+});
 
 // PUT endpoint - Approve Order
 router.put('/approve/:id', async (req, res) => {

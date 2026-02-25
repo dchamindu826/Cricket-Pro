@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../firebase';
-import { FiCheckCircle, FiCopy, FiUploadCloud } from 'react-icons/fi';
+import { FiCheckCircle, FiCopy, FiUploadCloud, FiCheck, FiStar, FiShield, FiZap, FiX } from 'react-icons/fi';
+import { FaCrown } from 'react-icons/fa';
 
 const VIPPackages = () => {
   const [packages, setPackages] = useState([]);
@@ -10,22 +11,63 @@ const VIPPackages = () => {
   const [copiedText, setCopiedText] = useState('');
   
   const [uploading, setUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null); // Aluth states deka preview ekata
+  const [selectedFile, setSelectedFile] = useState(null); 
   const [previewUrl, setPreviewUrl] = useState('');
 
+  // VIP States
+  const [isVip, setIsVip] = useState(false);
+  const [expiryDate, setExpiryDate] = useState('');
+
+  // 1. Check VIP Status based on Logged-in User
+  useEffect(() => {
+    const checkVipStatus = () => {
+        if (user) {
+            // User ge ID ekata adala VIP data gannawa
+            const vipStatus = localStorage.getItem(`is_vip_${user.uid}`) === 'true';
+            const expiry = localStorage.getItem(`vip_expiry_${user.uid}`);
+            
+            if (vipStatus && expiry) {
+                if (new Date(expiry) > new Date()) {
+                    setIsVip(true);
+                    setExpiryDate(new Date(expiry).toLocaleDateString());
+                } else {
+                    localStorage.setItem(`is_vip_${user.uid}`, 'false');
+                    localStorage.removeItem(`vip_expiry_${user.uid}`);
+                    setIsVip(false);
+                }
+            } else {
+                setIsVip(false); // User ta nattam false
+            }
+        } else {
+            setIsVip(false); // Login wela nattam false
+        }
+    };
+
+    checkVipStatus();
+  }, [user]); // user state eka wenas weddi meka run wenawa
+
+  // 2. Fetch Packages and listen to Auth state
   useEffect(() => {
     const fetchPackages = async () => {
       try {
         const res = await fetch('http://localhost:5000/api/packages');
         const data = await res.json();
-        setPackages(data);
+        // Backend එකෙන් array එකක් ආවොත් විතරක් set කරනවා, නැත්නම් හිස් array එකක් දානවා (Crash වෙන එක නවත්වන්න)
+        if (Array.isArray(data)) {
+            setPackages(data);
+        } else {
+            setPackages([]);
+        }
       } catch (error) {
         console.error("Error fetching packages", error);
+        setPackages([]);
       }
     };
     fetchPackages();
 
-    const unsubscribe = auth.onAuthStateChanged((u) => setUser(u));
+    const unsubscribe = auth.onAuthStateChanged((u) => {
+        setUser(u);
+    });
     return () => unsubscribe();
   }, []);
 
@@ -33,6 +75,7 @@ const VIPPackages = () => {
     if (!user) {
         try {
             await signInWithPopup(auth, provider);
+            // Login unata passe auth.onAuthStateChanged eken user wa set wenawa
             setSelectedPackage(pkg);
         } catch (error) {
             console.error("Login failed", error);
@@ -77,6 +120,16 @@ const VIPPackages = () => {
             setSelectedPackage(null); 
             setSelectedFile(null);
             setPreviewUrl('');
+            
+            // Note: Eththatama nam meka admin approve kalama wenne.
+            // Danata order eka dapu gaman test karanna active karanawa
+            const nextMonth = new Date();
+            nextMonth.setMonth(nextMonth.getMonth() + 1); 
+localStorage.setItem(`is_vip_${user.uid}`, 'true');
+localStorage.setItem(`vip_expiry_${user.uid}`, nextMonth.toISOString());
+
+window.dispatchEvent(new CustomEvent('vipActivated', { detail: { uid: user.uid } }));
+            
         } else {
             alert("Error: " + data.message);
         }
@@ -94,32 +147,112 @@ const VIPPackages = () => {
     </div>
   );
 
+  const FeatureList = ({ features, isGold }) => (
+    <ul className="space-y-4 mb-8 flex-1">
+      {features.map((feature, idx) => (
+        <li key={idx} className="flex items-start gap-3">
+          <div className={`mt-1 p-1 rounded-full shrink-0 ${isGold ? 'bg-cricket-gold/20 text-cricket-gold' : 'bg-slate-700 text-neon-blue'}`}>
+             <FiCheck size={14} className="font-bold" />
+          </div>
+          <span className="text-slate-300 text-sm leading-relaxed">{feature}</span>
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
-    <div id="vip-packages" className="max-w-6xl mx-auto px-4 my-20 pt-10">
-      <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cricket-gold to-yellow-500 mb-4 drop-shadow-lg">Premium VIP Access</h2>
+    <div id="vip-packages" className="max-w-7xl mx-auto px-4 my-24 relative z-20">
+      <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-[#00b3cc] mb-4 uppercase tracking-wider">
+            Choose Your Pass
+          </h2>
+          <p className="text-slate-400 max-w-2xl mx-auto text-lg">Join the VIP club to increase your winning chances and get exclusive perks.</p>
       </div>
 
       {!selectedPackage ? (
-          // flex flex-wrap justify-center damma balance wenna
-          <div className="flex flex-wrap justify-center gap-6">
-              {packages.map((pkg) => (
-                  <div key={pkg.id} className="w-full max-w-[350px] bg-[#0b1b36] p-8 rounded-3xl border border-cricket-gold/50 shadow-xl relative overflow-hidden group">
-                      <h3 className="text-2xl font-bold text-cricket-gold mb-2">{pkg.name}</h3>
-                      <div className="text-4xl font-black text-white mb-6">{pkg.price}<span className="text-lg text-slate-400 font-normal"> /mo</span></div>
-                      <ul className="space-y-3 text-sm text-slate-300 mb-8 flex-1">
-                          {pkg.features.map((f, i) => <li key={i}>✨ {f}</li>)}
-                      </ul>
-                      <button onClick={() => handleCheckoutClick(pkg)} className="w-full bg-cricket-gold text-cricket-dark font-black py-3 rounded-xl hover:shadow-[0_0_20px_rgba(255,215,0,0.5)] transition">
-                          Checkout Now
-                      </button>
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${packages && packages.length > 0 ? 'lg:grid-cols-3' : ''} gap-8 items-stretch max-w-6xl mx-auto`}>
+              
+              {/* ================= FREE PACKAGE ================= */}
+              <div className="bg-[#0b1b36] border border-slate-700 rounded-3xl p-8 flex flex-col hover:border-slate-500 transition-all duration-300 h-full">
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                     <FiShield className="text-slate-400" /> Standard User
+                  </h3>
+                  <div className="text-4xl font-black text-white mt-4">Free</div>
+                  <p className="text-slate-500 text-sm mt-2">Always free for everyone</p>
+                </div>
+                
+                <FeatureList 
+                   isGold={false}
+                   features={[
+                      "Watch live cricket streams",
+                      "Participate in live predictions",
+                      "Standard display name in comments",
+                      "Eligible for basic rewards"
+                   ]} 
+                />
+                
+                <div className="w-full mt-auto pt-4">
+                    <button disabled className="w-full bg-slate-800 text-slate-400 font-bold py-4 rounded-xl cursor-not-allowed">
+                      Current Plan
+                    </button>
+                </div>
+              </div>
+
+              {/* ================= DYNAMIC VIP PACKAGES ================= */}
+              {Array.isArray(packages) && packages.length > 0 && packages.map((pkg, index) => (
+                  <div key={pkg.id || index} className="bg-gradient-to-b from-[#1a1500] to-[#0b1b36] border-2 border-cricket-gold rounded-3xl p-8 flex flex-col shadow-[0_20px_50px_rgba(255,215,0,0.15)] relative h-full">
+                    
+                    {index === 0 && (
+                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-yellow-400 to-cricket-gold text-black px-6 py-1.5 rounded-full text-sm font-black uppercase tracking-widest shadow-lg flex items-center gap-2 whitespace-nowrap">
+                          <FaCrown size={16} /> Most Popular
+                        </div>
+                    )}
+
+                    <div className="mb-8 mt-2">
+                      <h3 className="text-2xl font-bold text-cricket-gold mb-2 flex items-center gap-2">
+                         <FiStar className="text-yellow-500 fill-current" /> {pkg.name}
+                      </h3>
+                      <div className="text-4xl lg:text-5xl font-black text-white drop-shadow-md mt-4">
+                          {pkg.price}
+                      </div>
+                      <p className="text-yellow-500/80 text-sm mt-2 font-semibold">Cancel anytime</p>
+                    </div>
+                    
+                    <FeatureList 
+                       isGold={true}
+                       features={pkg.features || []} 
+                    />
+                    
+                    <div className="w-full mt-auto pt-4">
+                        {isVip ? (
+                          <div>
+                              <button disabled className="w-full bg-green-500/20 text-green-500 border border-green-500/50 font-bold py-4 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed">
+                                  <FiCheckCircle size={20} /> Active Membership
+                              </button>
+                              <p className="text-center text-xs text-slate-400 mt-3">Valid until: {expiryDate}</p>
+                          </div>
+                        ) : (
+                          <button 
+                              onClick={() => handleCheckoutClick(pkg)}
+                              className="w-full bg-gradient-to-r from-cricket-gold to-yellow-600 text-black font-black py-4 rounded-xl shadow-[0_0_20px_rgba(255,215,0,0.4)] hover:shadow-[0_0_30px_rgba(255,215,0,0.6)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                          >
+                              <FiZap size={20} /> Subscribe Now
+                          </button>
+                        )}
+                    </div>
                   </div>
               ))}
           </div>
       ) : (
-          <div className="bg-[#0b1b36] p-6 md:p-8 rounded-3xl border border-neon-blue/50 max-w-2xl mx-auto shadow-2xl">
-              <h3 className="text-xl font-bold text-white mb-2 border-b border-slate-700 pb-4">Checkout: {selectedPackage.name} ({selectedPackage.price})</h3>
-              <p className="text-sm text-slate-400 mb-6">Logged in as: <span className="text-white font-bold">{user.email}</span></p>
+          /* ================= PAYMENT MODAL / SECTION ================= */
+          <div className="bg-[#0b1b36] p-6 md:p-8 rounded-3xl border border-neon-blue/50 max-w-2xl mx-auto shadow-2xl relative">
+              <button onClick={() => setSelectedPackage(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-2">
+                  <FiX size={20}/>
+              </button>
+              
+              <h3 className="text-xl font-bold text-white mb-2 border-b border-slate-700 pb-4 pr-8">Checkout: {selectedPackage.name} ({selectedPackage.price})</h3>
+              <p className="text-sm text-slate-400 mb-6">Logged in as: <span className="text-white font-bold">{user?.email}</span></p>
               
               <div className="space-y-6">
                   <div>
@@ -128,12 +261,7 @@ const VIPPackages = () => {
                       <CopyItem label="Account Name" value="Cricket Pro" />
                       <CopyItem label="Account Number" value="1000 2345 6789" />
                   </div>
-                  <div>
-                      <h4 className="text-yellow-500 font-bold mb-3">🪙 Crypto Payment (USDT TRC20)</h4>
-                      <CopyItem label="Wallet Address" value="TXaK7bR..." />
-                  </div>
                   
-                  {/* Image Preview and Upload Logic */}
                   <div className="bg-[#050f20] p-6 rounded-xl border border-slate-700 border-dashed text-center">
                       <h4 className="text-white font-bold mb-2">Upload Payment Slip</h4>
                       
@@ -160,7 +288,6 @@ const VIPPackages = () => {
                       </button>
                   </div>
               </div>
-              <button onClick={() => setSelectedPackage(null)} className="mt-6 text-slate-400 hover:text-white text-sm font-bold underline block mx-auto">Cancel & Go Back</button>
           </div>
       )}
     </div>

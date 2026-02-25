@@ -2,68 +2,111 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const router = express.Router();
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// 1. Add a new comment (With 1-per-device validation)
+// 1. POST - Add a new comment
 router.post('/add', async (req, res) => {
-  const { post_id, name, avatar, text, device_id } = req.body;
+  const { post_id, name, avatar, text, device_id, is_vip } = req.body;
+  
+  if (!post_id || !name || !text || !device_id) {
+      return res.status(400).json({ success: false, message: 'Missing required fields.' });
+  }
 
   try {
-    // Check if this device has already commented on this post
-    const { data: existingComments, error: checkError } = await supabase
-      .from('comments')
-      .select('id')
-      .eq('post_id', post_id)
-      .eq('device_id', device_id);
+    const { data: existingComment } = await supabase
+        .from('comments')
+        .select('id')
+        .eq('post_id', post_id)
+        .eq('device_id', device_id)
+        .single();
 
-    if (existingComments && existingComments.length > 0) {
-      return res.status(400).json({ success: false, message: 'You have already submitted predictions for this match!' });
+    if (existingComment) {
+        return res.status(400).json({ success: false, message: 'You have already submitted a prediction for this post!' });
     }
 
-    // Insert new comment
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('comments')
-      .insert([{ post_id, name, avatar, text, device_id, is_winner: false }]);
-
+      .insert([{ post_id, name, avatar, text, device_id, is_vip, is_winner: false }]);
+      
     if (error) throw error;
-    res.status(201).json({ success: true, message: 'Predictions submitted successfully!' });
-
+    res.status(201).json({ success: true, message: 'Prediction submitted successfully!' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// 2. Get all comments for a specific post
-router.get('/post/:postId', async (req, res) => {
+// 2. GET - Fetch comments for a specific post
+router.get('/:postId', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('comments')
       .select('*')
       .eq('post_id', req.params.postId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: true });
 
     if (error) throw error;
-    res.status(200).json(data);
+    res.status(200).json(data || []);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
 });
 
-// 3. Update Winners
-router.post('/update-winners', async (req, res) => {
-  const { winnerIds } = req.body; // Array of selected comment IDs
+// 3. PUT - Mark comment as winner
+router.put('/winner/:id', async (req, res) => {
   try {
-    // First, reset all winners for safety (optional, but good practice if you want to swap winners)
-    // Then set the selected ones to true
-    const { error } = await supabase
+    // මුලින්ම comment එක update කරනවා
+    const { data: commentData, error: commentError } = await supabase
       .from('comments')
       .update({ is_winner: true })
-      .in('id', winnerIds);
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (commentError) throw commentError;
+
+    // ඒ කෙනාව winners table එකටත් add කරනවා
+    if (commentData) {
+      await supabase.from('winners').insert([{ 
+        name: commentData.name || 'User', 
+        status: 'pending' 
+      }]);
+    }
+
+    res.status(200).json({ success: true, message: 'Marked as winner!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error marking winner' });
+  }
+});
+
+// PUT - Unmark comment as winner
+router.put('/unmark-winner/:id', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('comments')
+      .update({ is_winner: false })
+      .eq('id', req.params.id);
 
     if (error) throw error;
-    res.status(200).json({ success: true, message: 'Winners updated successfully!' });
+    res.status(200).json({ success: true, message: 'Unmarked successfully!' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Error unmarking winner' });
+  }
+});
+
+// 4. DELETE - Delete a comment
+router.delete('/:id', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+    res.status(200).json({ success: true, message: 'Comment deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error deleting comment' });
   }
 });
 

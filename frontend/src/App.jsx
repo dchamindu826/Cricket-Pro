@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 // Frontend Components
 import Navbar from './components/Navbar';
 import HeroSection from './components/Hero/HeroSection';
+import Scoreboard from './components/LiveScore/Scoreboard';
 import LiveStream from './components/LiveStream';
 import PostSection from './components/PostSection';
 import WinnersSection from './components/WinnersSection';
@@ -18,12 +19,17 @@ import ManagePosts from './components/Admin/Pages/ManagePosts';
 import AdminVIPPackages from './components/Admin/Pages/VIPPackages';
 import Orders from './components/Admin/Pages/Orders';
 import Winners from './components/Admin/Pages/Winners';
+import LiveComments from './components/Admin/Pages/LiveComments';
+import ManageAdmins from './components/Admin/Pages/ManageAdmins';
 
 // Main Frontend Layout
 const MainSite = () => (
   <div className="min-h-screen bg-cricket-dark font-sans text-slate-200 relative">
     <Navbar />
     <HeroSection />
+    
+    <Scoreboard />
+    
     <LiveStream />
     <PostSection />
     <WinnersSection />
@@ -33,36 +39,42 @@ const MainSite = () => (
 );
 
 function App() {
-  // Danata test karanna 'true' dila thiyenne. Backend awama meka false wenawa.
-  const [isAuthenticated, setIsAuthenticated] = useState(true); 
+  // Start with FALSE so it forces a login attempt
+  const [isAuthenticated, setIsAuthenticated] = useState(false); 
 
   return (
     <Router>
       <Routes>
-        {/* Public Main Website */}
         <Route path="/" element={<MainSite />} />
 
-        {/* Admin Login Route (domain/admin or domain/admin/login) */}
-        <Route 
-            path="/admin" 
-            element={isAuthenticated ? <Navigate to="/admin/dashboard" /> : <Login setIsAuthenticated={setIsAuthenticated} />} 
-        />
+        {/* --- STRICT ADMIN ROUTING --- */}
+        
+        {/* If user tries to go to Login page but is already logged in, redirect to Dashboard */}
         <Route 
             path="/admin/login" 
-            element={isAuthenticated ? <Navigate to="/admin/dashboard" /> : <Login setIsAuthenticated={setIsAuthenticated} />} 
+            element={!isAuthenticated ? <Login setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/admin/dashboard" replace />} 
         />
 
-        {/* Protected Admin Routes Wrapped with AdminLayout (Sidebar + Content) */}
-        <Route path="/admin" element={isAuthenticated ? <AdminLayout /> : <Navigate to="/admin/login" />}>
+        {/* Main Admin Wrapper Route */}
+        <Route 
+            path="/admin" 
+            element={isAuthenticated ? <AdminLayout /> : <Navigate to="/admin/login" replace />}
+        >
+            {/* If they just type /admin, redirect them to /admin/dashboard */}
+            <Route index element={<Navigate to="dashboard" replace />} />
+            
+            {/* Admin Sub-Pages */}
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="posts" element={<ManagePosts />} />
+            <Route path="comments" element={<LiveComments />} />
             <Route path="vip-packages" element={<AdminVIPPackages />} />
             <Route path="orders" element={<Orders />} />
             <Route path="winners" element={<Winners />} /> 
+            <Route path="manage-admins" element={<ManageAdmins />} />
         </Route>
         
-        {/* Fallback route - any wrong URL goes home */}
-        <Route path="*" element={<Navigate to="/" />} />
+        {/* Catch-all for unknown routes */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

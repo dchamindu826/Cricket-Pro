@@ -1,15 +1,18 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FiHome, FiEdit3, FiStar, FiShoppingCart, FiAward, FiLogOut } from 'react-icons/fi';
+// Added FiShield to the import list below!
+import { FiHome, FiEdit3, FiMessageSquare, FiStar, FiShoppingCart, FiAward, FiLogOut, FiShield } from 'react-icons/fi';
 import { BiCricketBall } from 'react-icons/bi';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const menuItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <FiHome /> },
+    { name: 'Live Comments', path: '/admin/comments', icon: <FiMessageSquare /> },
     { name: 'Manage Posts', path: '/admin/posts', icon: <FiEdit3 /> },
     { name: 'VIP Packages', path: '/admin/vip-packages', icon: <FiStar /> },
     { name: 'VIP Orders', path: '/admin/orders', icon: <FiShoppingCart /> },
     { name: 'Winners Workflow', path: '/admin/winners', icon: <FiAward /> },
+    { name: 'Manage Admins', path: '/admin/manage-admins', icon: <FiShield /> },
   ];
 
   return (

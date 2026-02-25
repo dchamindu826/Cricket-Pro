@@ -1,32 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
 
 const Scoreboard = () => {
-  // Mock Data state
-  const [score, setScore] = useState({ runs: 145, wickets: 3, overs: 18.2, currentBatsmanRuns: 4 });
+  const [score, setScore] = useState({ runs: 0, wickets: 0, overs: 0.0, currentBatsmanRuns: 0 });
+  const [teamInfo, setTeamInfo] = useState({ name: "TBA" });
+  const [matchStatus, setMatchStatus] = useState("● LIVE | Fetching Live Score...");
+  const [matchTitle, setMatchTitle] = useState("Loading Match Details...");
   const [isSix, setIsSix] = useState(false);
+  
+  const prevRunsRef = useRef(0);
 
-  // Simulate Live Data Update (Hamathissema run 1k 2k 4k 6k wadinawa wage)
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Random runs (0, 1, 4, or 6)
-      const possibleRuns = [0, 1, 1, 2, 4, 6]; 
-      const runsScored = possibleRuns[Math.floor(Math.random() * possibleRuns.length)];
-      
-      if (runsScored === 6) {
-        setIsSix(true);
-        // Sekadakis 6 animation eka nawaththanna
-        setTimeout(() => setIsSix(false), 3000);
+    // Record Site Visit for Realtime Traffic Dashboard
+    axios.get('http://localhost:5000/api/admin/track-visit').catch(()=>console.log("Tracking ignored"));
+
+    const fetchLiveScore = async () => {
+      try {
+        const API_KEY = 'fe3e0924-6bce-4384-b459-6d086f80c9d9'; 
+        const response = await axios.get(`https://api.cricapi.com/v1/currentMatches?apikey=${API_KEY}&offset=0`);
+        
+        if (response.data && response.data.data && response.data.data.length > 0) {
+          
+          // === FIX: හරියටම Live යන Match එක පෙරලා ගන්නවා ===
+          const liveMatches = response.data.data.filter(m => m.matchStarted && !m.matchEnded);
+          let currentMatch = liveMatches.length > 0 ? liveMatches[0] : response.data.data[0];
+          
+          setMatchTitle(currentMatch.name);
+          setTeamInfo({ name: currentMatch.teamInfo[0]?.shortname || "TBA" });
+          setMatchStatus(`● LIVE | ${currentMatch.status}`);
+
+          if (currentMatch.score && currentMatch.score.length > 0) {
+             const latestScore = currentMatch.score[0]; 
+             const newRuns = latestScore.r;
+             
+             let runDiff = newRuns - prevRunsRef.current;
+             if (prevRunsRef.current === 0 || runDiff < 0 || runDiff > 6) {
+                 runDiff = 0; 
+             }
+
+             if (runDiff === 6) {
+               setIsSix(true);
+               setTimeout(() => setIsSix(false), 3000);
+             }
+
+             setScore({
+               runs: latestScore.r,
+               wickets: latestScore.w,
+               overs: latestScore.o,
+               currentBatsmanRuns: runDiff
+             });
+
+             prevRunsRef.current = latestScore.r;
+          }
+        } else {
+          setMatchTitle("No Live Matches Right Now");
+          setMatchStatus("Waiting for the next match...");
+        }
+      } catch (error) {
+        console.error("Failed to fetch live score", error);
+        setMatchStatus("Error connecting to live score...");
       }
+    };
 
-      setScore(prev => ({
-        ...prev,
-        runs: prev.runs + runsScored,
-        overs: prev.overs + 0.1 > 18.5 ? 19.0 : prev.overs + 0.1, // Simple over logic
-        currentBatsmanRuns: runsScored
-      }));
-
-    }, 5000); // Hama second 5kata sarayak update wenawa
+    fetchLiveScore(); 
+    const interval = setInterval(fetchLiveScore, 20000); 
 
     return () => clearInterval(interval);
   }, []);
@@ -34,7 +72,6 @@ const Scoreboard = () => {
   return (
     <div className="relative w-full bg-cricket-blue/50 backdrop-blur-md border-y border-neon-blue/20 p-4 z-40 overflow-hidden">
       
-      {/* === "6" Animation Overlay === */}
       <AnimatePresence>
         {isSix && (
           <motion.div
@@ -46,47 +83,48 @@ const Scoreboard = () => {
           >
             <div className="text-center">
                <h2 className="text-8xl font-extrabold text-cricket-gold drop-shadow-[0_0_50px_rgba(255,215,0,0.8)] animate-pulse">
-                  6 RUNS!
+                 6 RUNS!
                </h2>
                <p className="text-neon-blue text-2xl mt-2 uppercase tracking-[0.5em]">Huge Hit!</p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-      {/* ============================ */}
 
+      <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex flex-col md:flex-row items-center space-x-0 md:space-x-6">
+            <div className="flex flex-col items-center md:items-start text-center md:text-left mb-2 md:mb-0 border-b md:border-b-0 md:border-r border-slate-700 pb-2 md:pb-0 md:pr-6">
+                <span className="text-sm md:text-md text-neon-blue font-bold tracking-wide">{matchTitle}</span>
+                <span className="text-xs text-slate-400">Current Innings</span>
+            </div>
 
-      <div className="container mx-auto flex flex-col md:flex-row justify-between items-center">
-        {/* Team Info */}
-        <div className="flex items-center space-x-4 mb-4 md:mb-0">
-            <div className="flex flex-col items-end">
-                <span className="text-2xl font-bold text-white">IND</span>
-                <span className="text-sm text-slate-400">Batting</span>
-            </div>
-            <div className="text-5xl font-extrabold text-neon-blue">
-                {score.runs}/{score.wickets}
-            </div>
-            <div className="text-xl text-slate-300 pt-4">
-                in {score.overs.toFixed(1)} overs
+            <div className="flex items-center space-x-4">
+                <div className="flex flex-col items-end">
+                    <span className="text-3xl font-bold text-white">{teamInfo.name}</span>
+                </div>
+                <div className="text-5xl font-extrabold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                    {score.runs}<span className="text-3xl text-slate-300">/{score.wickets}</span>
+                </div>
+                <div className="text-xl text-slate-300 pt-3">
+                    ({score.overs})
+                </div>
             </div>
         </div>
 
-        {/* Last Ball Event */}
-        <div className="flex items-center space-x-2">
-            <span className="text-slate-400">Last Ball:</span>
+        <div className="flex items-center space-x-2 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700">
+            <span className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Last Ball:</span>
             <motion.div
-                key={score.runs} // Score eka wenas wena hama welema meka animate wenawa
+                key={score.runs} 
                 initial={{ scale: 1.5, color: '#fff' }}
                 animate={{ scale: 1, color: score.currentBatsmanRuns === 6 ? '#ffd700' : (score.currentBatsmanRuns === 4 ? '#64ffda' : '#fff') }}
-                className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-xl ${score.currentBatsmanRuns === 6 ? 'bg-cricket-blue border-2 border-cricket-gold' : 'bg-slate-700'}`}
+                className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-lg ${score.currentBatsmanRuns === 6 ? 'bg-cricket-blue border border-cricket-gold shadow-[0_0_10px_rgba(255,215,0,0.5)]' : 'bg-slate-700'}`}
             >
                 {score.currentBatsmanRuns}
             </motion.div>
         </div>
 
-        {/* Match Status */}
-        <div className="text-cricket-gold font-semibold animate-pulse">
-             ● LIVE | IND needs 32 runs in 18 balls
+        <div className="text-cricket-gold text-sm font-bold animate-pulse max-w-sm text-center md:text-right bg-[#050f20]/50 px-3 py-1.5 rounded-md border border-cricket-gold/30">
+             {matchStatus}
         </div>
       </div>
     </div>
