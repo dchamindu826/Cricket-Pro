@@ -5,81 +5,87 @@ import axios from 'axios';
 const Scoreboard = () => {
   const [score, setScore] = useState({ runs: 0, wickets: 0, overs: 0.0, currentBatsmanRuns: 0 });
   const [teamInfo, setTeamInfo] = useState({ name: "TBA" });
-  const [matchStatus, setMatchStatus] = useState("● LIVE | Fetching Live Score...");
-  const [matchTitle, setMatchTitle] = useState("Loading Match Details...");
+  const [matchStatus, setMatchStatus] = useState("● LIVE | Waiting for Admin Selection...");
+  const [matchTitle, setMatchTitle] = useState("Live Scoreboard");
   const [isSix, setIsSix] = useState(false);
   
   const prevRunsRef = useRef(0);
 
   useEffect(() => {
-    // Tracking call
-    axios.get('https://cricket-pro-three.vercel.app/api/admin/track-visit').catch(()=>console.log("Tracking ignored"));
+    axios.get('https://cricket-pro-three.vercel.app/api/admin/track-visit').catch(()=>console.log("Ignored"));
 
     const fetchLiveScore = async () => {
       try {
-        // මුලින්ම Admin තෝරලා තියෙන Match ID එක අරගන්නවා
+        // 1. Admin තෝරපු මැච් ID එක ගන්නවා
         const settingsRes = await axios.get('https://cricket-pro-three.vercel.app/api/admin/active-match');
         const adminSelectedId = settingsRes.data.match_id;
 
-        const API_KEY = 'fe3e0924-6bce-4384-b459-6d086f80c9d9'; 
-        const response = await axios.get(`https://api.cricapi.com/v1/currentMatches?apikey=${API_KEY}&offset=0`);
-        
-        if (response.data && response.data.data && response.data.data.length > 0) {
-          
-          let currentMatch;
+        if (!adminSelectedId) {
+            setMatchStatus("● STANDBY | No Match Selected");
+            return;
+        }
 
-          // Admin ID එකක් දීලා තියෙනවා නම් ඒ මැච් එක හොයනවා
-          if (adminSelectedId) {
-             currentMatch = response.data.data.find(m => m.id === adminSelectedId);
-          } 
-          
-          // Admin ID එකක් දීලා නැත්නම් හෝ ඒක API එකේ නැත්නම්, Auto පලවෙනි Live මැච් එක ගන්නවා
-          if (!currentMatch) {
-             const liveMatches = response.data.data.filter(m => m.matchStarted && !m.matchEnded);
-             currentMatch = liveMatches.length > 0 ? liveMatches[0] : response.data.data[0];
+        // 2. RapidAPI එකෙන් ඒ මැච් එකේ විස්තර ගන්නවා
+        const options = {
+          method: 'GET',
+          url: `https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${adminSelectedId}`,
+          headers: {
+            'X-RapidAPI-Key': 'cd72733c17mshb6183f2ce7d960ap15870fjsn5d09d19ac6a5',
+            'X-RapidAPI-Host': 'cricbuzz-cricket.p.rapidapi.com'
           }
-          
-          if (currentMatch) {
-              setMatchTitle(currentMatch.name);
-              setTeamInfo({ name: currentMatch.teamInfo && currentMatch.teamInfo.length > 0 ? currentMatch.teamInfo[0].shortname : "TBA" });
-              setMatchStatus(`● LIVE | ${currentMatch.status}`);
+        };
 
-              if (currentMatch.score && currentMatch.score.length > 0) {
-                const latestScore = currentMatch.score[0]; 
-                const newRuns = latestScore.r;
-                
-                let runDiff = newRuns - prevRunsRef.current;
-                if (prevRunsRef.current === 0 || runDiff < 0 || runDiff > 6) {
-                    runDiff = 0; 
+        const response = await axios.request(options);
+        const matchData = response.data;
+
+        if (matchData && matchData.matchInfo) {
+            setMatchTitle(`${matchData.matchInfo.team1.teamSName} vs ${matchData.matchInfo.team2.teamSName}`);
+            setMatchStatus(`● LIVE | ${matchData.matchInfo.status}`);
+
+            // ලකුණු ගන්නවා (Bat කරන ටීම් එක හොයාගෙන)
+            if (matchData.matchScore && matchData.matchScore.team1Score) {
+                let currentInnings = matchData.matchScore.team1Score.inngs1 || matchData.matchScore.team1Score.inngs2;
+                let battingTeamName = matchData.matchInfo.team1.teamSName;
+
+                // Team 2 එක බැට් කරනවා නම්
+                if (matchData.matchScore.team2Score && matchData.matchScore.team2Score.inngs1) {
+                     currentInnings = matchData.matchScore.team2Score.inngs1;
+                     battingTeamName = matchData.matchInfo.team2.teamSName;
                 }
 
-                if (runDiff === 6) {
-                  setIsSix(true);
-                  setTimeout(() => setIsSix(false), 3000);
+                if (currentInnings) {
+                    const newRuns = currentInnings.runs || 0;
+                    
+                    let runDiff = newRuns - prevRunsRef.current;
+                    if (prevRunsRef.current === 0 || runDiff < 0 || runDiff > 6) {
+                        runDiff = 0; 
+                    }
+
+                    if (runDiff === 6) {
+                      setIsSix(true);
+                      setTimeout(() => setIsSix(false), 3000);
+                    }
+
+                    setScore({
+                      runs: newRuns,
+                      wickets: currentInnings.wickets || 0,
+                      overs: currentInnings.overs || 0.0,
+                      currentBatsmanRuns: runDiff
+                    });
+
+                    prevRunsRef.current = newRuns;
+                    setTeamInfo({ name: battingTeamName });
                 }
-
-                setScore({
-                  runs: latestScore.r,
-                  wickets: latestScore.w,
-                  overs: latestScore.o,
-                  currentBatsmanRuns: runDiff
-                });
-
-                prevRunsRef.current = latestScore.r;
-              }
-          }
-        } else {
-          setMatchTitle("No Live Matches Right Now");
-          setMatchStatus("Waiting for the next match...");
+            }
         }
       } catch (error) {
-        console.error("Failed to fetch live score", error);
-        setMatchStatus("Error connecting to live score...");
+        console.error("Score fetch error:", error);
       }
     };
 
     fetchLiveScore(); 
-    const interval = setInterval(fetchLiveScore, 20000); 
+    // API ලිමිට් එක ඉතුරු කරන්න මේක තත්පර 30කට සැරයක් (30000ms) විතරක් Run වෙන්න හැදුවා
+    const interval = setInterval(fetchLiveScore, 30000); 
     return () => clearInterval(interval);
   }, []);
 
@@ -126,7 +132,7 @@ const Scoreboard = () => {
         </div>
 
         <div className="flex items-center space-x-2 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700">
-            <span className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Last Ball:</span>
+            <span className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Last Run:</span>
             <motion.div
                 key={score.runs} 
                 initial={{ scale: 1.5, color: '#fff' }}
