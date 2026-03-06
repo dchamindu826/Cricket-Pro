@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FiPlus, FiTrash2, FiEdit, FiAward, FiCheckCircle, FiMessageSquare } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiMessageSquare } from 'react-icons/fi';
 
 const ManagePosts = () => {
-  // === CREATE POST STATES ===
   const [postTitle, setPostTitle] = useState('');
+  const [postDescription, setPostDescription] = useState(''); // අලුත් state එක
   const [postImage, setPostImage] = useState(null);
   const [questions, setQuestions] = useState([{ id: 1, text: '' }]);
   const [prizes, setPrizes] = useState([{ id: 1, title: '', price: '' }]);
 
-  // === REAL DATA STATES ===
   const [activePost, setActivePost] = useState(null);
   const [comments, setComments] = useState([]);
   const [previousPosts, setPreviousPosts] = useState([]);
@@ -18,11 +17,9 @@ const ManagePosts = () => {
   useEffect(() => {
     const fetchPostsData = async () => {
       try {
-        // 1. Fetch Active Post
         const activeRes = await axios.get('https://cricket-pro-three.vercel.app/api/posts/active');
         setActivePost(activeRes.data);
 
-        // 2. Fetch Comments if active post exists (Make sure commentRoutes is working backend)
         if (activeRes.data && activeRes.data.id) {
           try {
              const commentsRes = await axios.get(`https://cricket-pro-three.vercel.app/api/comments/${activeRes.data.id}`);
@@ -32,7 +29,6 @@ const ManagePosts = () => {
           }
         }
 
-        // 3. Fetch Previous Posts
         const historyRes = await axios.get('https://cricket-pro-three.vercel.app/api/posts/history');
         setPreviousPosts(historyRes.data || []);
 
@@ -42,38 +38,23 @@ const ManagePosts = () => {
         setLoading(false);
       }
     };
-
     fetchPostsData();
   }, []);
 
-  const addQuestion = () => {
-    if (questions.length < 15) setQuestions([...questions, { id: Date.now(), text: '' }]);
-  };
-  const updateQuestion = (id, text) => {
-    setQuestions(questions.map(q => q.id === id ? { ...q, text } : q));
-  };
-  const removeQuestion = (id) => {
-    setQuestions(questions.filter(q => q.id !== id));
-  };
+  const addQuestion = () => { if (questions.length < 15) setQuestions([...questions, { id: Date.now(), text: '' }]); };
+  const updateQuestion = (id, text) => { setQuestions(questions.map(q => q.id === id ? { ...q, text } : q)); };
+  const removeQuestion = (id) => { setQuestions(questions.filter(q => q.id !== id)); };
 
-  const addPrize = () => {
-    if (prizes.length < 5) setPrizes([...prizes, { id: Date.now(), title: '', price: '' }]);
-  };
-  const updatePrize = (id, field, value) => {
-    setPrizes(prizes.map(p => p.id === id ? { ...p, [field]: value } : p));
-  };
-  const removePrize = (id) => {
-    setPrizes(prizes.filter(p => p.id !== id));
-  };
+  const addPrize = () => { if (prizes.length < 5) setPrizes([...prizes, { id: Date.now(), title: '', price: '' }]); };
+  const updatePrize = (id, field, value) => { setPrizes(prizes.map(p => p.id === id ? { ...p, [field]: value } : p)); };
+  const removePrize = (id) => { setPrizes(prizes.filter(p => p.id !== id)); };
 
-  // SUBMIT NEW POST
   const handleCreatePost = async (e) => {
     e.preventDefault();
     const formData = new FormData();
     formData.append('title', postTitle);
+    formData.append('description', postDescription); // description එක යවනවා
     if(postImage) formData.append('image', postImage);
-    
-    // Convert to JSON strings for backend
     formData.append('questions', JSON.stringify(questions));
     formData.append('prizes', JSON.stringify(prizes));
 
@@ -89,11 +70,9 @@ const ManagePosts = () => {
     }
   };
 
-  // DELETE ACTIVE POST
   const handleDeleteActivePost = async () => {
     if(!window.confirm("Are you sure you want to delete the active post?")) return;
     try {
-      // Supabase uses 'id' not '_id'
       await axios.delete(`https://cricket-pro-three.vercel.app/api/posts/${activePost.id}`);
       setActivePost(null);
       setComments([]);
@@ -110,8 +89,6 @@ const ManagePosts = () => {
       <h1 className="text-3xl font-black text-white mb-8">Manage Posts</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* === LEFT: CREATE POST === */}
         <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 h-fit shadow-lg">
           <h2 className="text-xl font-bold text-neon-blue mb-4">Create New Post</h2>
           <form onSubmit={handleCreatePost} className="space-y-6">
@@ -120,6 +97,13 @@ const ManagePosts = () => {
               <label className="block text-sm mb-1 text-slate-400">Post Title</label>
               <input type="text" value={postTitle} onChange={(e)=>setPostTitle(e.target.value)} required className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white outline-none" placeholder="Enter title..." />
             </div>
+
+            {/* අලුත් Description Input එක */}
+            <div>
+              <label className="block text-sm mb-1 text-slate-400">Description / Match Details</label>
+              <textarea value={postDescription} onChange={(e)=>setPostDescription(e.target.value)} required rows="3" className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white outline-none" placeholder="Match teams, time, and other details..." />
+            </div>
+
             <div>
               <label className="block text-sm mb-1 text-slate-400">Upload Image</label>
               <input type="file" onChange={(e)=>setPostImage(e.target.files[0])} className="w-full bg-slate-900 border border-slate-600 rounded-lg p-2 text-white" />
@@ -154,7 +138,13 @@ const ManagePosts = () => {
                 <div key={p.id} className="flex flex-col sm:flex-row items-center gap-2 mb-3 bg-slate-800 p-2 rounded-lg">
                   <span className="text-cricket-gold font-bold w-6 hidden sm:block">#{index + 1}</span>
                   <input type="text" value={p.title} onChange={(e) => updatePrize(p.id, 'title', e.target.value)} placeholder="Title (e.g. 1st Place)" className="w-full sm:flex-1 bg-slate-900 border border-slate-600 rounded-md p-2 text-sm outline-none" required />
-                  <input type="number" value={p.price} onChange={(e) => updatePrize(p.id, 'price', e.target.value)} placeholder="Price/Value" className="w-full sm:w-1/3 bg-slate-900 border border-slate-600 rounded-md p-2 text-sm outline-none" />
+                  
+                  {/* $ සළකුණ දැම්මා */}
+                  <div className="w-full sm:w-1/3 relative">
+                    <span className="absolute left-3 top-2.5 text-slate-400">$</span>
+                    <input type="number" value={p.price} onChange={(e) => updatePrize(p.id, 'price', e.target.value)} placeholder="0.00" className="w-full bg-slate-900 border border-slate-600 rounded-md py-2 pr-2 pl-7 text-sm outline-none" />
+                  </div>
+
                   {prizes.length > 1 && (
                     <button type="button" onClick={() => removePrize(p.id)} className="text-red-400 p-2"><FiTrash2 size={18}/></button>
                   )}
@@ -169,7 +159,6 @@ const ManagePosts = () => {
         </div>
 
 
-        {/* === RIGHT: ACTIVE POST === */}
         <div className="space-y-6">
           {activePost ? (
             <div className="bg-[#050f20] p-6 rounded-2xl border border-cricket-gold shadow-[0_0_15px_rgba(255,215,0,0.1)] relative">
@@ -179,7 +168,6 @@ const ManagePosts = () => {
               <span className="bg-green-500 text-black text-xs font-black px-2 py-1 rounded-sm uppercase mb-3 inline-block">Live Active Post</span>
               <h3 className="text-xl font-bold text-white mb-2">{activePost.title}</h3>
               
-              {/* Image Preview */}
               {activePost.imagePath && (
                  <img src={activePost.imagePath} alt="Post" className="w-full h-32 object-cover rounded-lg mb-4 opacity-80" />
               )}
@@ -194,11 +182,15 @@ const ManagePosts = () => {
                 
                 <div className="h-[250px] overflow-y-auto pr-2 space-y-3 scrollbar-thin scrollbar-thumb-slate-600">
                   {comments.length > 0 ? comments.map((comment) => (
-                    <div key={comment.id || comment._id} className="bg-slate-800/50 p-3 rounded-lg border border-slate-700 flex justify-between items-start">
-                      <div>
-                        <p className="text-sm font-bold text-neon-blue mb-1">{comment.user?.name || 'User'}</p>
+                    <div key={comment.id} className="bg-slate-800/50 p-3 rounded-lg border border-slate-700 flex flex-col items-start">
+                        <p className="text-sm font-bold text-neon-blue mb-1">{comment.name || 'User'}</p>
                         <p className="text-sm text-slate-300">{comment.text}</p>
-                      </div>
+                        {/* Admin reply එකක් තියෙනවා නම් පෙන්නනවා */}
+                        {comment.admin_reply && (
+                           <div className="mt-2 text-xs bg-cricket-gold/10 text-cricket-gold border border-cricket-gold/30 p-2 rounded w-full">
+                               <strong>Admin:</strong> {comment.admin_reply}
+                           </div>
+                        )}
                     </div>
                   )) : (
                     <p className="text-slate-500 text-sm italic">No comments yet.</p>
@@ -212,7 +204,6 @@ const ManagePosts = () => {
             </div>
           )}
 
-          {/* === PREVIOUS POSTS === */}
           <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">
             <h3 className="text-lg font-bold text-white mb-4">Previous Posts</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
