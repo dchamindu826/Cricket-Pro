@@ -16,16 +16,12 @@ router.get('/track-visit', async (req, res) => {
   }
 });
 
-// 1. Dashboard Stats (100% Real Data)
+// 1. Dashboard Stats
 router.get('/dashboard-stats', async (req, res) => {
   try {
-    // Pending Orders
     const { count: pendingOrders } = await supabase.from('vip_orders').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-
-    // Active VIP Members (Approved)
     const { count: vipMembers } = await supabase.from('vip_orders').select('*', { count: 'exact', head: true }).eq('status', 'approved');
 
-    // Active Post Comments
     const { data: activePost } = await supabase.from('posts').select('id').eq('isActive', true).single();
     let activePostComments = 0;
     if (activePost) {
@@ -33,21 +29,16 @@ router.get('/dashboard-stats', async (req, res) => {
       activePostComments = count || 0;
     }
 
-    // Published Winners Total Prize Value
     const { data: winnersData } = await supabase.from('winners').select('prize_value').eq('status', 'published');
     let totalPrizesGiven = 0;
     if (winnersData) {
         totalPrizesGiven = winnersData.reduce((sum, item) => sum + (Number(item.prize_value) || 0), 0);
     }
 
-    // VIP Revenue
     const vipRevenue = (vipMembers || 0) * 1000; 
 
-    // === REAL TRAFFIC DATA ===
-    // Total Traffic Count
     const { count: totalTraffic } = await supabase.from('site_traffic').select('*', { count: 'exact', head: true });
 
-    // Live Users (Users who visited in the last 5 minutes)
     const fiveMinsAgo = new Date(Date.now() - 5 * 60000).toISOString();
     const { count: liveUsers } = await supabase.from('site_traffic').select('*', { count: 'exact', head: true }).gte('visited_at', fiveMinsAgo);
 
@@ -61,7 +52,6 @@ router.get('/dashboard-stats', async (req, res) => {
       totalPrizesGiven
     });
   } catch (error) {
-    console.error("Error fetching stats:", error);
     res.status(500).json({ message: "Error fetching dashboard data" });
   }
 });
@@ -102,7 +92,6 @@ router.get('/live-stream', (req, res) => {
   res.json({ url: currentLiveStreamUrl });
 });
 
-// 4. Update Link
 router.post('/live-stream', (req, res) => {
   if(req.body.url) {
       currentLiveStreamUrl = req.body.url;
@@ -113,20 +102,39 @@ router.post('/live-stream', (req, res) => {
 });
 
 // ==========================================
+// ACTIVE MATCH ROUTES (මෙහි තමයි 404 Error එක හැදෙන්නේ)
+// ==========================================
+
+router.get('/active-match', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('app_settings').select('active_match_id').eq('id', 1).single();
+    res.json({ match_id: data ? data.active_match_id : '' });
+  } catch (error) { 
+    // Setting table එක නැත්නම් හිස් එකක් යවනවා Error නොදී
+    res.json({ match_id: '' }); 
+  }
+});
+
+router.post('/active-match', async (req, res) => {
+  try {
+    const { match_id } = req.body;
+    // Upsert කරනවා (තිබ්බොත් Update වෙනවා, නැත්නම් අලුතින් හැදෙනවා)
+    const { error } = await supabase.from('app_settings').upsert({ id: 1, active_match_id: match_id });
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) { 
+    res.status(500).json({ message: "Error saving active match" }); 
+  }
+});
+
+// ==========================================
 // ADMIN USER MANAGEMENT ROUTES
 // ==========================================
 
-// 1. Admin Login Verification
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
-    const { data, error } = await supabase
-      .from('admins')
-      .select('*')
-      .eq('username', username)
-      .eq('password', password)
-      .single();
-
+    const { data, error } = await supabase.from('admins').select('*').eq('username', username).eq('password', password).single();
     if (data) {
       res.json({ success: true, user: data.username });
     } else {
@@ -137,7 +145,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// 2. Get All Admins
 router.get('/users', async (req, res) => {
   try {
     const { data, error } = await supabase.from('admins').select('id, username, created_at').order('created_at', { ascending: true });
@@ -148,15 +155,10 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// 3. Add New Admin
 router.post('/users', async (req, res) => {
   const { username, password } = req.body;
   try {
-    const { data, error } = await supabase
-      .from('admins')
-      .insert([{ username, password }])
-      .select('id, username, created_at');
-    
+    const { data, error } = await supabase.from('admins').insert([{ username, password }]).select('id, username, created_at');
     if (error) {
       if (error.code === '23505') return res.status(400).json({ message: "Username already exists!" });
       throw error;
@@ -167,16 +169,10 @@ router.post('/users', async (req, res) => {
   }
 });
 
-// 4. Edit Admin Credentials
 router.put('/users/:id', async (req, res) => {
   const { username, password } = req.body;
   try {
-    const { data, error } = await supabase
-      .from('admins')
-      .update({ username, password })
-      .eq('id', req.params.id)
-      .select('id, username, created_at');
-
+    const { data, error } = await supabase.from('admins').update({ username, password }).eq('id', req.params.id).select('id, username, created_at');
     if (error) throw error;
     res.json({ success: true, data: data[0] });
   } catch (error) {
@@ -184,7 +180,6 @@ router.put('/users/:id', async (req, res) => {
   }
 });
 
-// 5. Delete Admin
 router.delete('/users/:id', async (req, res) => {
   try {
     const { error } = await supabase.from('admins').delete().eq('id', req.params.id);
