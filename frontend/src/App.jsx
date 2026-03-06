@@ -10,7 +10,7 @@ import PostSection from './components/PostSection';
 import WinnersSection from './components/WinnersSection';
 import VIPPackages from './components/VIPPackages';
 import WhatsAppBtn from './components/WhatsAppBtn';
-// NativeBanner එක import කරන එක අයින් කරා
+import NativeBanner from './components/NativeBanner'; // <-- NativeBanner එක ආයෙත් Import කළා
 
 // Admin Layout & Pages
 import AdminLayout from './components/Admin/Layout/AdminLayout';
@@ -29,12 +29,18 @@ const MainSite = () => (
     <Navbar />
     <HeroSection />
     
+    <NativeBanner /> {/* <-- Hero එකට යටින් Banner එකක් */}
+    
     <Scoreboard />
     <LiveStream />
+
+    <NativeBanner /> {/* <-- Live Stream එකට යටින් Banner එකක් */}
 
     <PostSection />
     <WinnersSection />
     <VIPPackages />
+
+    <NativeBanner /> {/* <-- VIP පැකේජ් වලට යටින් Banner එකක් */}
 
     <WhatsAppBtn />
   </div>
