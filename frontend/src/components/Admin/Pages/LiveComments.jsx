@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FiMessageSquare, FiTrash2, FiAward, FiCheckCircle, FiXCircle, FiCornerDownRight } from 'react-icons/fi';
+import { FiMessageSquare, FiTrash2, FiAward, FiCheckCircle, FiXCircle, FiCornerDownRight, FiEdit } from 'react-icons/fi';
 
 const LiveComments = () => {
   const [activePost, setActivePost] = useState(null);
@@ -63,7 +63,7 @@ const LiveComments = () => {
   };
 
   const deleteComment = async (commentId) => {
-    if(!window.confirm("Are you sure you want to delete this comment?")) return;
+    if(!window.confirm("Are you sure you want to delete this full comment?")) return;
     try {
       await axios.delete(`https://cricket-pro-three.vercel.app/api/comments/${commentId}`);
       setComments(comments.filter(c => c.id !== commentId));
@@ -73,6 +73,7 @@ const LiveComments = () => {
     }
   };
 
+  // === Admin Reply එක Save/Edit කිරීම ===
   const submitAdminReply = async (commentId) => {
       if(!replyText.trim()) return;
       try {
@@ -80,10 +81,24 @@ const LiveComments = () => {
           setComments(comments.map(c => c.id === commentId ? { ...c, admin_reply: replyText } : c));
           setReplyingTo(null);
           setReplyText('');
-          alert('Reply sent successfully!');
+          alert('Reply saved successfully!');
       } catch (err) {
           console.error(err);
-          alert('Error sending reply. Check if backend is updated.');
+          alert('Error saving reply. Check if backend is updated.');
+      }
+  };
+
+  // === Admin Reply එක Delete කිරීම ===
+  const deleteAdminReply = async (commentId) => {
+      if(!window.confirm("Are you sure you want to delete your reply?")) return;
+      try {
+          // Reply එක null කරලා යවනවා
+          await axios.put(`https://cricket-pro-three.vercel.app/api/comments/reply/${commentId}`, { reply: null });
+          setComments(comments.map(c => c.id === commentId ? { ...c, admin_reply: null } : c));
+          alert('Reply deleted!');
+      } catch (err) {
+          console.error(err);
+          alert('Error deleting reply.');
       }
   };
 
@@ -141,20 +156,43 @@ const LiveComments = () => {
                               {comment.text}
                           </p>
 
+                          {/* Admin Reply Section - With Edit and Delete icons */}
                           {comment.admin_reply && (
-                              <div className="mt-3 ml-2 md:ml-4 p-3 bg-cricket-gold/10 border border-cricket-gold/30 rounded-lg text-sm text-slate-300 relative w-full md:w-[90%]">
+                              <div className="mt-3 ml-2 md:ml-4 p-3 bg-cricket-gold/10 border border-cricket-gold/30 rounded-lg text-sm text-slate-300 relative w-full md:w-[90%] group">
                                   <span className="absolute -top-2 left-2 bg-cricket-gold text-black text-[10px] font-bold px-1 rounded">Admin Replied</span>
                                   <FiCornerDownRight className="inline text-cricket-gold mr-2"/>
                                   {comment.admin_reply}
+
+                                  {/* Edit & Delete Icons for Admin Reply */}
+                                  <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button 
+                                          onClick={() => { setReplyingTo(comment.id); setReplyText(comment.admin_reply); }} 
+                                          className="text-blue-400 hover:text-blue-300 bg-slate-800/80 p-1.5 rounded-md transition"
+                                          title="Edit Reply"
+                                      >
+                                          <FiEdit size={14}/>
+                                      </button>
+                                      <button 
+                                          onClick={() => deleteAdminReply(comment.id)} 
+                                          className="text-red-400 hover:text-red-300 bg-slate-800/80 p-1.5 rounded-md transition"
+                                          title="Delete Reply"
+                                      >
+                                          <FiTrash2 size={14}/>
+                                      </button>
+                                  </div>
                               </div>
                           )}
                         </div>
                     </div>
                     
                     <div className="flex items-center gap-2 shrink-0 self-end sm:self-center mt-2 sm:mt-0">
-                      <button onClick={() => { setReplyingTo(replyingTo === comment.id ? null : comment.id); setReplyText(''); }} className="px-3 py-2 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 rounded-lg text-sm font-semibold transition">
-                         Reply
-                      </button>
+                      
+                      {/* Hide main Reply button if already replied (use edit icon instead) */}
+                      {!comment.admin_reply && (
+                        <button onClick={() => { setReplyingTo(replyingTo === comment.id ? null : comment.id); setReplyText(''); }} className="px-3 py-2 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 rounded-lg text-sm font-semibold transition">
+                           Reply
+                        </button>
+                      )}
 
                       {comment.is_winner && (
                          <button onClick={() => unmarkWinner(comment.id)} className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition">
@@ -162,7 +200,7 @@ const LiveComments = () => {
                          </button>
                       )}
 
-                      <button onClick={() => deleteComment(comment.id)} className="p-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition">
+                      <button onClick={() => deleteComment(comment.id)} className="p-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition" title="Delete Entire Comment">
                         <FiTrash2 className="text-lg" />
                       </button>
                     </div>
@@ -172,7 +210,8 @@ const LiveComments = () => {
                 {replyingTo === comment.id && (
                     <div className="mt-4 flex flex-col sm:flex-row gap-2 w-full pl-0 sm:pl-12">
                         <input type="text" value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Type admin reply..." className="w-full flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-sm text-white focus:border-neon-blue outline-none"/>
-                        <button onClick={() => submitAdminReply(comment.id)} className="w-full sm:w-auto bg-cricket-gold text-black font-bold px-6 py-2.5 rounded-lg text-sm hover:bg-yellow-500 transition">Send</button>
+                        <button onClick={() => submitAdminReply(comment.id)} className="w-full sm:w-auto bg-cricket-gold text-black font-bold px-6 py-2.5 rounded-lg text-sm hover:bg-yellow-500 transition">Save</button>
+                        <button onClick={() => {setReplyingTo(null); setReplyText('');}} className="w-full sm:w-auto bg-slate-700 text-white font-bold px-6 py-2.5 rounded-lg text-sm hover:bg-slate-600 transition">Cancel</button>
                     </div>
                 )}
               </div>

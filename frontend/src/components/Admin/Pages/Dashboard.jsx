@@ -1,45 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FiUsers, FiDollarSign, FiMessageSquare, FiGift, FiClock, FiVideo, FiTrendingUp, FiActivity } from 'react-icons/fi';
+import { FiUsers, FiDollarSign, FiMessageSquare, FiGift, FiClock, FiVideo, FiTrendingUp, FiActivity, FiMonitor } from 'react-icons/fi';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
-    liveUsers: 0,
-    totalTraffic: 0,
-    pendingOrders: 0,
-    vipMembers: 0,
-    activePostComments: 0,
-    vipRevenue: 0,
-    totalPrizesGiven: 0,
+    liveUsers: 0, totalTraffic: 0, pendingOrders: 0, vipMembers: 0,
+    activePostComments: 0, vipRevenue: 0, totalPrizesGiven: 0,
   });
   const [revenueData, setRevenueData] = useState([]);
   const [ytLink, setYtLink] = useState('');
   const [isUpdatingLink, setIsUpdatingLink] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Scoreboard Control States
+  const [liveMatches, setLiveMatches] = useState([]);
+  const [selectedMatchId, setSelectedMatchId] = useState('');
+  const [currentActiveMatchId, setCurrentActiveMatchId] = useState('');
+  const [updatingMatch, setUpdatingMatch] = useState(false);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const statsRes = await axios.get('https://cricket-pro-three.vercel.app/api/admin/dashboard-stats');
+        const [statsRes, chartRes, linkRes, activeMatchRes] = await Promise.all([
+          axios.get('https://cricket-pro-three.vercel.app/api/admin/dashboard-stats'),
+          axios.get('https://cricket-pro-three.vercel.app/api/admin/revenue-chart'),
+          axios.get('https://cricket-pro-three.vercel.app/api/admin/live-stream'),
+          axios.get('https://cricket-pro-three.vercel.app/api/admin/active-match') // කලින් හදපු API එක
+        ]);
+
         setStats(statsRes.data);
-
-        const chartRes = await axios.get('https://cricket-pro-three.vercel.app/api/admin/revenue-chart');
         setRevenueData(chartRes.data);
-
-        const linkRes = await axios.get('https://cricket-pro-three.vercel.app/api/admin/live-stream');
         setYtLink(linkRes.data.url);
-        
+        setCurrentActiveMatchId(activeMatchRes.data.match_id);
+        setSelectedMatchId(activeMatchRes.data.match_id); // Default value
+
+        // Fetch Live Matches list from CricAPI
+        const API_KEY = 'fe3e0924-6bce-4384-b459-6d086f80c9d9'; 
+        const matchRes = await axios.get(`https://api.cricapi.com/v1/currentMatches?apikey=${API_KEY}&offset=0`);
+        if (matchRes.data && matchRes.data.data) {
+           setLiveMatches(matchRes.data.data);
+        }
+
         setLoading(false);
       } catch (error) {
-        console.error("Dashboard data fetch error:", error);
+        console.error("Dashboard fetch error:", error);
         setLoading(false);
       }
     };
     fetchDashboardData();
-    // Refresh live users every 1 minute
-    const interval = setInterval(fetchDashboardData, 60000);
-    return () => clearInterval(interval);
   }, []);
 
   const handleUpdateStream = async () => {
@@ -47,10 +56,18 @@ const Dashboard = () => {
     try {
       await axios.post('https://cricket-pro-three.vercel.app/api/admin/live-stream', { url: ytLink });
       alert('Live stream link updated successfully!');
-    } catch (error) {
-      alert('Failed to update link');
-    }
+    } catch (error) { alert('Failed to update link'); }
     setIsUpdatingLink(false);
+  };
+
+  const handleSetActiveMatch = async () => {
+    setUpdatingMatch(true);
+    try {
+      await axios.post('https://cricket-pro-three.vercel.app/api/admin/active-match', { match_id: selectedMatchId });
+      setCurrentActiveMatchId(selectedMatchId);
+      alert('Active match updated for Scoreboard!');
+    } catch (error) { alert('Failed to update active match'); }
+    setUpdatingMatch(false);
   };
 
   const StatCard = ({ title, value, icon: Icon, color, isPulse }) => (
@@ -66,20 +83,18 @@ const Dashboard = () => {
   );
 
   if (loading) return <div className="text-center text-white mt-20 animate-pulse">Loading Dashboard...</div>;
-
   const netRevenue = stats.vipRevenue - stats.totalPrizesGiven;
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       <h1 className="text-3xl font-black text-white mb-6">Overview Dashboard</h1>
 
-      {/* Stats Grid - Updated with Live Users & Total Traffic */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Live Active Users" value={stats.liveUsers} icon={FiActivity} color="bg-green-500/20 text-green-500 border border-green-500/50" isPulse={true} />
         <StatCard title="Total Site Visits" value={stats.totalTraffic} icon={FiUsers} color="bg-blue-500/20 text-blue-500 border border-blue-500/50" />
         <StatCard title="Active VIP Members" value={stats.vipMembers} icon={FiUsers} color="bg-yellow-500/20 text-yellow-500 border border-yellow-500/50" />
         <StatCard title="Post Predictions" value={stats.activePostComments} icon={FiMessageSquare} color="bg-slate-500/20 text-slate-300 border border-slate-500/50" />
-        
         <StatCard title="VIP Revenue" value={`Rs. ${stats.vipRevenue}`} icon={FiDollarSign} color="bg-emerald-500/20 text-emerald-500 border border-emerald-500/50" />
         <StatCard title="Total Prizes Given" value={`Rs. ${stats.totalPrizesGiven}`} icon={FiGift} color="bg-red-500/20 text-red-500 border border-red-500/50" />
         <StatCard title="Net Revenue" value={`Rs. ${netRevenue}`} icon={FiTrendingUp} color="bg-neon-blue/20 text-neon-blue border border-neon-blue/50" />
@@ -87,6 +102,8 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+        
+        {/* Analytics Chart */}
         <div className="lg:col-span-2 bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg flex flex-col">
           <h2 className="text-xl font-bold text-white mb-6">Revenue Analytics</h2>
           <div className="w-full flex-1" style={{ minHeight: '300px' }}>
@@ -108,27 +125,62 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg flex flex-col justify-center">
-          <div className="flex items-center gap-3 mb-4">
-            <FiVideo className="text-red-500 text-2xl" />
-            <h2 className="text-xl font-bold text-white">Update Live Stream</h2>
-          </div>
-          <p className="text-sm text-slate-400 mb-4">Paste the YouTube embed URL here to update the live stream.</p>
-          <input 
-            type="text" 
-            value={ytLink}
-            onChange={(e) => setYtLink(e.target.value)}
-            placeholder="https://www.youtube.com/embed/..." 
-            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-neon-blue mb-4"
-          />
-          <button 
-            onClick={handleUpdateStream}
-            disabled={isUpdatingLink}
-            className="w-full bg-neon-blue hover:bg-teal-400 text-slate-900 font-bold px-8 py-3 rounded-lg transition"
-          >
-            {isUpdatingLink ? 'Updating...' : 'Save Live Link'}
-          </button>
+        {/* Right Side Controls */}
+        <div className="space-y-6">
+            
+            {/* Live Scoreboard Control */}
+            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <FiMonitor className="text-cricket-gold text-2xl" />
+                  <h2 className="text-xl font-bold text-white">Scoreboard Control</h2>
+                </div>
+                <p className="text-sm text-slate-400 mb-4">Select which match to show on the public Live Scoreboard.</p>
+                
+                <select 
+                    value={selectedMatchId} 
+                    onChange={(e) => setSelectedMatchId(e.target.value)} 
+                    className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cricket-gold mb-4"
+                >
+                    <option value="">-- Auto Select Latest Live Match --</option>
+                    {liveMatches.map(match => (
+                        <option key={match.id} value={match.id}>
+                            {match.name} {match.matchStarted ? '(Live)' : '(Upcoming)'}
+                        </option>
+                    ))}
+                </select>
+
+                <button 
+                  onClick={handleSetActiveMatch}
+                  disabled={updatingMatch || selectedMatchId === currentActiveMatchId}
+                  className={`w-full font-bold px-8 py-3 rounded-lg transition ${selectedMatchId === currentActiveMatchId ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-cricket-gold hover:bg-yellow-500 text-black'}`}
+                >
+                  {updatingMatch ? 'Updating...' : selectedMatchId === currentActiveMatchId ? 'Currently Active' : 'Set Active Match'}
+                </button>
+            </div>
+
+            {/* YouTube Live Update */}
+            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <FiVideo className="text-red-500 text-2xl" />
+                <h2 className="text-xl font-bold text-white">Update Live Stream</h2>
+              </div>
+              <input 
+                type="text" 
+                value={ytLink}
+                onChange={(e) => setYtLink(e.target.value)}
+                placeholder="https://www.youtube.com/embed/..." 
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-neon-blue mb-4"
+              />
+              <button 
+                onClick={handleUpdateStream}
+                disabled={isUpdatingLink}
+                className="w-full bg-neon-blue hover:bg-teal-400 text-slate-900 font-bold px-8 py-3 rounded-lg transition"
+              >
+                {isUpdatingLink ? 'Updating...' : 'Save Live Link'}
+              </button>
+            </div>
         </div>
+
       </div>
     </div>
   );

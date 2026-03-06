@@ -1,155 +1,126 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FiTrash2, FiEdit2, FiCheck } from 'react-icons/fi';
 
 const AdminWinners = () => {
   const [pendingWinners, setPendingWinners] = useState([]);
-  const [publishData, setPublishData] = useState({});
+  const [publishedWinners, setPublishedWinners] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Custom Winner States
   const [customName, setCustomName] = useState('');
   const [customPrize, setCustomPrize] = useState('');
   const [customPrizeValue, setCustomPrizeValue] = useState('');
 
-  useEffect(() => {
-    fetchPendingWinners();
-  }, []);
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({});
 
-  const fetchPendingWinners = async () => {
+  const fetchData = async () => {
     try {
-      const response = await axios.get('https://cricket-pro-three.vercel.app/api/winners/pending');
-      setPendingWinners(response.data);
+      const [pendingRes, publishedRes] = await Promise.all([
+        axios.get('https://cricket-pro-three.vercel.app/api/winners/pending'),
+        axios.get('https://cricket-pro-three.vercel.app/api/winners/published')
+      ]);
+      setPendingWinners(pendingRes.data);
+      setPublishedWinners(publishedRes.data);
       setLoading(false);
     } catch (error) {
-      console.error("Error fetching pending winners:", error);
+      console.error(error);
       setLoading(false);
     }
   };
 
-  const handleInputChange = (id, field, value) => {
-    setPublishData(prev => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        [field]: value
-      }
-    }));
-  };
+  useEffect(() => { fetchData(); }, []);
 
-  // 1. Publish Pending Winner
   const handlePublish = async (winner) => {
-    const data = publishData[winner.id] || {};
-    const finalName = data.name !== undefined ? data.name : winner.name;
-    const finalPrize = data.prize || '';
-    const finalPrizeValue = data.prize_value || 0;
-
-    if (!finalPrize.trim()) {
-      alert("Please enter a prize before publishing!");
-      return;
-    }
-
     try {
       await axios.put(`https://cricket-pro-three.vercel.app/api/winners/publish/${winner.id}`, {
-        name: finalName,
-        prize: finalPrize,
-        prize_value: Number(finalPrizeValue)
+        name: winner.name, prize: winner.prize || 'VIP', prize_value: winner.prize_value || 0
       });
-      
-      alert("Winner successfully published!");
-      setPendingWinners(pendingWinners.filter(w => w.id !== winner.id));
-    } catch (error) {
-      alert("Failed to publish winner. Check backend logs.");
-    }
+      alert("Published successfully!");
+      fetchData();
+    } catch (error) { alert("Failed to publish"); }
   };
 
-  // 2. Add Custom Winner Directly
-  const handleAddCustomWinner = async (e) => {
+  const handleAddCustom = async (e) => {
     e.preventDefault();
-    if (!customName || !customPrize) return alert("Please fill in both name and prize!");
-
     try {
       await axios.post('https://cricket-pro-three.vercel.app/api/winners/custom', {
-        name: customName,
-        prize: customPrize,
-        prize_value: Number(customPrizeValue || 0)
+        name: customName, prize: customPrize, prize_value: Number(customPrizeValue || 0)
       });
-      
-      alert("Custom Winner added and published successfully!");
-      setCustomName('');
-      setCustomPrize('');
-      setCustomPrizeValue('');
-    } catch (error) {
-      alert("Failed to add custom winner.");
-    }
+      alert("Added successfully!");
+      setCustomName(''); setCustomPrize(''); setCustomPrizeValue('');
+      fetchData();
+    } catch (error) { alert("Failed to add"); }
   };
 
-  if (loading) return <div className="text-center text-white mt-10">Loading pending winners...</div>;
+  const handleDelete = async (id) => {
+    if(!window.confirm("Are you sure?")) return;
+    try {
+      await axios.delete(`https://cricket-pro-three.vercel.app/api/winners/${id}`);
+      fetchData();
+    } catch (error) { alert("Failed to delete"); }
+  };
+
+  const handleSaveEdit = async (id) => {
+    try {
+      await axios.put(`https://cricket-pro-three.vercel.app/api/winners/edit/${id}`, editData);
+      setEditingId(null);
+      fetchData();
+    } catch (error) { alert("Failed to update"); }
+  };
+
+  const renderWinnerRow = (winner, isPublished) => {
+    const isEditing = editingId === winner.id;
+    return (
+      <div key={winner.id} className="bg-slate-800 border border-slate-700 rounded-lg p-4 flex flex-col md:flex-row gap-4 items-center">
+        {isEditing ? (
+          <>
+            <input type="text" value={editData.name} onChange={e=>setEditData({...editData, name: e.target.value})} className="bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white flex-1" />
+            <input type="text" value={editData.prize} onChange={e=>setEditData({...editData, prize: e.target.value})} className="bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white flex-1" />
+            <input type="number" value={editData.prize_value} onChange={e=>setEditData({...editData, prize_value: e.target.value})} className="bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white w-24" />
+            <button onClick={() => handleSaveEdit(winner.id)} className="bg-green-500 p-2 rounded text-black"><FiCheck size={20}/></button>
+          </>
+        ) : (
+          <>
+            <div className="flex-1 text-white font-bold">{winner.name}</div>
+            <div className="flex-1 text-slate-300">{winner.prize || 'No Prize'}</div>
+            <div className="w-24 text-cricket-gold font-bold">${winner.prize_value || 0}</div>
+            
+            <div className="flex gap-2">
+              {!isPublished && <button onClick={() => handlePublish(winner)} className="bg-emerald-600 px-4 py-1.5 rounded text-sm text-white font-bold">Publish</button>}
+              <button onClick={() => { setEditingId(winner.id); setEditData(winner); }} className="bg-blue-500/20 text-blue-400 p-2 rounded"><FiEdit2/></button>
+              <button onClick={() => handleDelete(winner.id)} className="bg-red-500/20 text-red-500 p-2 rounded"><FiTrash2/></button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  if (loading) return <div className="text-center text-white mt-10">Loading...</div>;
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-8">
-      
-      {/* 1. Add Custom Winner Section */}
       <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
         <h2 className="text-xl font-bold mb-4 text-neon-blue">Add Custom Winner</h2>
-        <form onSubmit={handleAddCustomWinner} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Winner Name</label>
-            <input type="text" value={customName} onChange={(e)=>setCustomName(e.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white" required />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Prize Item (e.g. VIP Pass)</label>
-            <input type="text" value={customPrize} onChange={(e)=>setCustomPrize(e.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white" required />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Prize Value (Rs.)</label>
-            <input type="number" value={customPrizeValue} onChange={(e)=>setCustomPrizeValue(e.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white" required />
-          </div>
-          <button type="submit" className="bg-cricket-gold hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded transition">
-            Add & Publish
-          </button>
+        <form onSubmit={handleAddCustom} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <div><label className="block text-xs text-slate-400 mb-1">Name</label><input type="text" value={customName} onChange={(e)=>setCustomName(e.target.value)} className="w-full bg-slate-900 border rounded p-2 text-white" required /></div>
+          <div><label className="block text-xs text-slate-400 mb-1">Prize Text</label><input type="text" value={customPrize} onChange={(e)=>setCustomPrize(e.target.value)} className="w-full bg-slate-900 border rounded p-2 text-white" required /></div>
+          <div><label className="block text-xs text-slate-400 mb-1">Value ($)</label><input type="number" value={customPrizeValue} onChange={(e)=>setCustomPrizeValue(e.target.value)} className="w-full bg-slate-900 border rounded p-2 text-white" required /></div>
+          <button type="submit" className="bg-cricket-gold text-black font-bold py-2 px-4 rounded">Add & Publish</button>
         </form>
       </div>
 
-      {/* 2. Pending Winners List */}
       <div>
-        <h2 className="text-2xl font-bold mb-4 text-white">Pending Winners Approval</h2>
-        {pendingWinners.length === 0 ? (
-          <div className="bg-slate-800 border border-dashed border-slate-600 text-slate-400 p-6 rounded-lg text-center">
-            No pending winners currently.
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {pendingWinners.map((winner) => (
-              <div key={winner.id} className="bg-slate-800 border border-slate-700 rounded-lg p-5 flex flex-col md:flex-row items-center gap-4">
-                
-                <div className="flex-1 w-full">
-                  <label className="block text-xs text-slate-400 mb-1">Name</label>
-                  <input type="text" defaultValue={winner.name} onChange={(e) => handleInputChange(winner.id, 'name', e.target.value)} className="w-full bg-slate-900 border border-slate-600 text-white rounded px-3 py-2" />
-                </div>
-                
-                <div className="flex-1 w-full">
-                  <label className="block text-xs text-slate-400 mb-1">Prize Reward</label>
-                  <input type="text" placeholder="e.g. VIP Pass" onChange={(e) => handleInputChange(winner.id, 'prize', e.target.value)} className="w-full bg-slate-900 border border-slate-600 text-white rounded px-3 py-2" />
-                </div>
+        <h2 className="text-xl font-bold mb-3 text-orange-400">Pending Approval ({pendingWinners.length})</h2>
+        <div className="grid gap-3">{pendingWinners.map(w => renderWinnerRow(w, false))}</div>
+      </div>
 
-                <div className="flex-1 w-full">
-                  <label className="block text-xs text-slate-400 mb-1">Value (Rs.)</label>
-                  <input type="number" placeholder="5000" onChange={(e) => handleInputChange(winner.id, 'prize_value', e.target.value)} className="w-full bg-slate-900 border border-slate-600 text-white rounded px-3 py-2" />
-                </div>
-                
-                <div className="mt-5 md:mt-0 pt-4">
-                  <button onClick={() => handlePublish(winner)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-6 rounded transition-colors w-full">
-                    Publish
-                  </button>
-                </div>
-                
-              </div>
-            ))}
-          </div>
-        )}
+      <div>
+        <h2 className="text-xl font-bold mb-3 text-green-400">Published Winners ({publishedWinners.length})</h2>
+        <div className="grid gap-3">{publishedWinners.map(w => renderWinnerRow(w, true))}</div>
       </div>
     </div>
   );
 };
-
 export default AdminWinners;

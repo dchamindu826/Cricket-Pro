@@ -12,46 +12,61 @@ const Scoreboard = () => {
   const prevRunsRef = useRef(0);
 
   useEffect(() => {
-    // Record Site Visit for Realtime Traffic Dashboard
+    // Tracking call
     axios.get('https://cricket-pro-three.vercel.app/api/admin/track-visit').catch(()=>console.log("Tracking ignored"));
 
     const fetchLiveScore = async () => {
       try {
+        // මුලින්ම Admin තෝරලා තියෙන Match ID එක අරගන්නවා
+        const settingsRes = await axios.get('https://cricket-pro-three.vercel.app/api/admin/active-match');
+        const adminSelectedId = settingsRes.data.match_id;
+
         const API_KEY = 'fe3e0924-6bce-4384-b459-6d086f80c9d9'; 
         const response = await axios.get(`https://api.cricapi.com/v1/currentMatches?apikey=${API_KEY}&offset=0`);
         
         if (response.data && response.data.data && response.data.data.length > 0) {
           
-          // === FIX: හරියටම Live යන Match එක පෙරලා ගන්නවා ===
-          const liveMatches = response.data.data.filter(m => m.matchStarted && !m.matchEnded);
-          let currentMatch = liveMatches.length > 0 ? liveMatches[0] : response.data.data[0];
+          let currentMatch;
+
+          // Admin ID එකක් දීලා තියෙනවා නම් ඒ මැච් එක හොයනවා
+          if (adminSelectedId) {
+             currentMatch = response.data.data.find(m => m.id === adminSelectedId);
+          } 
           
-          setMatchTitle(currentMatch.name);
-          setTeamInfo({ name: currentMatch.teamInfo[0]?.shortname || "TBA" });
-          setMatchStatus(`● LIVE | ${currentMatch.status}`);
+          // Admin ID එකක් දීලා නැත්නම් හෝ ඒක API එකේ නැත්නම්, Auto පලවෙනි Live මැච් එක ගන්නවා
+          if (!currentMatch) {
+             const liveMatches = response.data.data.filter(m => m.matchStarted && !m.matchEnded);
+             currentMatch = liveMatches.length > 0 ? liveMatches[0] : response.data.data[0];
+          }
+          
+          if (currentMatch) {
+              setMatchTitle(currentMatch.name);
+              setTeamInfo({ name: currentMatch.teamInfo && currentMatch.teamInfo.length > 0 ? currentMatch.teamInfo[0].shortname : "TBA" });
+              setMatchStatus(`● LIVE | ${currentMatch.status}`);
 
-          if (currentMatch.score && currentMatch.score.length > 0) {
-             const latestScore = currentMatch.score[0]; 
-             const newRuns = latestScore.r;
-             
-             let runDiff = newRuns - prevRunsRef.current;
-             if (prevRunsRef.current === 0 || runDiff < 0 || runDiff > 6) {
-                 runDiff = 0; 
-             }
+              if (currentMatch.score && currentMatch.score.length > 0) {
+                const latestScore = currentMatch.score[0]; 
+                const newRuns = latestScore.r;
+                
+                let runDiff = newRuns - prevRunsRef.current;
+                if (prevRunsRef.current === 0 || runDiff < 0 || runDiff > 6) {
+                    runDiff = 0; 
+                }
 
-             if (runDiff === 6) {
-               setIsSix(true);
-               setTimeout(() => setIsSix(false), 3000);
-             }
+                if (runDiff === 6) {
+                  setIsSix(true);
+                  setTimeout(() => setIsSix(false), 3000);
+                }
 
-             setScore({
-               runs: latestScore.r,
-               wickets: latestScore.w,
-               overs: latestScore.o,
-               currentBatsmanRuns: runDiff
-             });
+                setScore({
+                  runs: latestScore.r,
+                  wickets: latestScore.w,
+                  overs: latestScore.o,
+                  currentBatsmanRuns: runDiff
+                });
 
-             prevRunsRef.current = latestScore.r;
+                prevRunsRef.current = latestScore.r;
+              }
           }
         } else {
           setMatchTitle("No Live Matches Right Now");
@@ -65,7 +80,6 @@ const Scoreboard = () => {
 
     fetchLiveScore(); 
     const interval = setInterval(fetchLiveScore, 20000); 
-
     return () => clearInterval(interval);
   }, []);
 
@@ -94,7 +108,7 @@ const Scoreboard = () => {
       <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex flex-col md:flex-row items-center space-x-0 md:space-x-6">
             <div className="flex flex-col items-center md:items-start text-center md:text-left mb-2 md:mb-0 border-b md:border-b-0 md:border-r border-slate-700 pb-2 md:pb-0 md:pr-6">
-                <span className="text-sm md:text-md text-neon-blue font-bold tracking-wide">{matchTitle}</span>
+                <span className="text-sm md:text-md text-neon-blue font-bold tracking-wide max-w-xs line-clamp-1">{matchTitle}</span>
                 <span className="text-xs text-slate-400">Current Innings</span>
             </div>
 
@@ -123,7 +137,7 @@ const Scoreboard = () => {
             </motion.div>
         </div>
 
-        <div className="text-cricket-gold text-sm font-bold animate-pulse max-w-sm text-center md:text-right bg-[#050f20]/50 px-3 py-1.5 rounded-md border border-cricket-gold/30">
+        <div className="text-cricket-gold text-xs sm:text-sm font-bold animate-pulse max-w-sm text-center md:text-right bg-[#050f20]/50 px-3 py-1.5 rounded-md border border-cricket-gold/30">
              {matchStatus}
         </div>
       </div>
