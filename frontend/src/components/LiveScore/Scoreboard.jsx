@@ -3,31 +3,31 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 
 const Scoreboard = () => {
-  const [score, setScore] = useState({ runs: 0, wickets: 0, overs: 0.0, currentBatsmanRuns: 0 });
-  const [teamInfo, setTeamInfo] = useState({ name: "TBA" });
-  const [matchStatus, setMatchStatus] = useState("● LIVE | Waiting for Admin Selection...");
-  const [matchTitle, setMatchTitle] = useState("Live Scoreboard");
-  const [isSix, setIsSix] = useState(false);
-  
-  const prevRunsRef = useRef(0);
+ const [score, setScore] = useState({ runs: 0, wickets: 0, overs: 0.0, currentBatsmanRuns: 0 });
+ const [teamInfo, setTeamInfo] = useState({ name: "TBA" });
+ const [matchStatus, setMatchStatus] = useState("● LIVE | Waiting for Admin Selection...");
+ const [matchTitle, setMatchTitle] = useState("Live Scoreboard");
+ const [isSix, setIsSix] = useState(false);
+ 
+ const prevRunsRef = useRef(0);
 
-  useEffect(() => {
-    axios.get('https://cricket-pro-three.vercel.app/api/admin/track-visit').catch(()=>console.log("Ignored"));
+ useEffect(() => {
+  axios.get('https://cricket-pro-three.vercel.app/api/admin/track-visit').catch(()=>console.log("Ignored"));
 
-    const fetchLiveScore = async () => {
-      try {
-        // 1. Admin තෝරපු මැච් ID එක ගන්නවා
-        const settingsRes = await axios.get('https://cricket-pro-three.vercel.app/api/admin/active-match');
-        const adminSelectedId = settingsRes.data.match_id;
+ const fetchLiveScore = async () => {
+ try {
+ // 1. Admin තෝරපු මැච් ID එක ගන්නවා
+ const settingsRes = await axios.get('https://cricket-pro-three.vercel.app/api/admin/active-match');
+ const adminSelectedId = settingsRes.data.match_id;
 
-        if (!adminSelectedId) {
-            setMatchStatus("● STANDBY | No Match Selected");
-            return;
-        }
+ if (!adminSelectedId) {
+ setMatchStatus("● STANDBY | No Match Selected");
+ return;
+ }
 
-        // 2. අපේ Backend එක හරහා ඒ මැච් එකේ ලකුණු ගන්නවා
-        const response = await axios.get(`https://cricket-pro-three.vercel.app/api/admin/live-score/${adminSelectedId}`);
-        const matchData = response.data;
+ // 2. අපේ Backend එක හරහා ඒ මැච් එකේ ලකුණු ගන්නවා
+ const response = await axios.get(`https://cricket-pro-three.vercel.app/api/admin/live-score/${adminSelectedId}`);
+ const matchData = response.data;
 
         if (matchData && matchData.matchInfo) {
             setMatchTitle(`${matchData.matchInfo.team1.teamSName} vs ${matchData.matchInfo.team2.teamSName}`);

@@ -10,6 +10,7 @@ import PostSection from './components/PostSection';
 import WinnersSection from './components/WinnersSection';
 import VIPPackages from './components/VIPPackages';
 import WhatsAppBtn from './components/WhatsAppBtn';
+import NativeBanner from './components/NativeBanner'; // <-- අලුතින් Banner එක Import කලා
 
 // Admin Layout & Pages
 import AdminLayout from './components/Admin/Layout/AdminLayout';
@@ -24,60 +25,59 @@ import ManageAdmins from './components/Admin/Pages/ManageAdmins';
 
 // Main Frontend Layout
 const MainSite = () => (
-  <div className="min-h-screen bg-cricket-dark font-sans text-slate-200 relative">
-    <Navbar />
-    <HeroSection />
+  <div className="min-h-screen bg-cricket-dark font-sans text-slate-200 relative">
+    <Navbar />
+    <HeroSection />
+    
+    <NativeBanner /> {/* <-- Hero එකට යටින් Banner එකක් */}
+    
+    <Scoreboard />
+    <LiveStream />
     
-    <Scoreboard />
-    
-    <LiveStream />
-    <PostSection />
-    <WinnersSection />
-    <VIPPackages />
-    <WhatsAppBtn />
-  </div>
+    <NativeBanner /> {/* <-- Live Stream එකට යටින් Banner එකක් */}
+
+    <PostSection />
+    <WinnersSection />
+    <VIPPackages />
+
+    <NativeBanner /> {/* <-- VIP පැකේජ් වලට යටින් Banner එකක් */}
+
+    <WhatsAppBtn />
+  </div>
 );
 
 function App() {
-  // Start with FALSE so it forces a login attempt
-  const [isAuthenticated, setIsAuthenticated] = useState(false); 
+  const [isAuthenticated, setIsAuthenticated] = useState(false); 
 
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<MainSite />} />
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<MainSite />} />
 
-        {/* --- STRICT ADMIN ROUTING --- */}
-        
-        {/* If user tries to go to Login page but is already logged in, redirect to Dashboard */}
-        <Route 
-            path="/admin/login" 
-            element={!isAuthenticated ? <Login setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/admin/dashboard" replace />} 
-        />
+        <Route 
+            path="/admin/login" 
+            element={!isAuthenticated ? <Login setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/admin/dashboard" replace />} 
+        />
 
-        {/* Main Admin Wrapper Route */}
-        <Route 
-            path="/admin" 
-            element={isAuthenticated ? <AdminLayout /> : <Navigate to="/admin/login" replace />}
-        >
-            {/* If they just type /admin, redirect them to /admin/dashboard */}
-            <Route index element={<Navigate to="dashboard" replace />} />
-            
-            {/* Admin Sub-Pages */}
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="posts" element={<ManagePosts />} />
-            <Route path="comments" element={<LiveComments />} />
-            <Route path="vip-packages" element={<AdminVIPPackages />} />
-            <Route path="orders" element={<Orders />} />
-            <Route path="winners" element={<Winners />} /> 
-            <Route path="manage-admins" element={<ManageAdmins />} />
-        </Route>
-        
-        {/* Catch-all for unknown routes */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
-  );
+        <Route 
+            path="/admin" 
+            element={isAuthenticated ? <AdminLayout /> : <Navigate to="/admin/login" replace />}
+        >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="posts" element={<ManagePosts />} />
+            <Route path="comments" element={<LiveComments />} />
+            <Route path="vip-packages" element={<AdminVIPPackages />} />
+            <Route path="orders" element={<Orders />} />
+            <Route path="winners" element={<Winners />} /> 
+            <Route path="manage-admins" element={<ManageAdmins />} />
+        </Route>
+        
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
+  );
 }
 
 export default App;
