@@ -3,27 +3,23 @@ import { FiMenu, FiX } from 'react-icons/fi';
 import { auth, provider } from '../firebase';
 import { signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
 import axios from 'axios';
+import { Link, useLocation, useNavigate } from 'react-router-dom'; // <-- React Router import කළා
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [isVip, setIsVip] = useState(false);
   const [showVipAnimation, setShowVipAnimation] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      
-      // User කෙනෙක් ලොග් වෙලා ඉන්නවා නම්, කෙලින්ම Backend එකෙන් VIP status අහනවා
       if (currentUser && currentUser.email) {
           try {
-              // මේ route එකෙන් admin approve කරපු active order එකක් තියෙනවද බලනවා
               const response = await axios.get(`https://cricket-pro-three.vercel.app/api/orders/check-vip/${currentUser.email}`);
-              if (response.data.isVip) {
-                  setIsVip(true);
-              } else {
-                  setIsVip(false);
-              }
+              setIsVip(!!response.data.isVip);
           } catch (error) {
               console.error("Error checking VIP status:", error);
               setIsVip(false);
@@ -32,7 +28,6 @@ const Navbar = () => {
           setIsVip(false);
       }
     });
-
     return () => unsubscribe();
   }, []); 
 
@@ -51,6 +46,14 @@ const Navbar = () => {
 
   const scrollToSection = (e, id) => {
     e.preventDefault();
+    setIsOpen(false);
+    
+    if (location.pathname !== '/') {
+        // වෙන page එකක ඉන්නවා නම් මුලින්ම Home එකට ගිහින් ඊට පස්සේ scroll කරනවා
+        navigate(`/#${id}`);
+        return;
+    }
+
     const element = document.getElementById(id);
     if (element) {
       const y = element.getBoundingClientRect().top + window.scrollY - 80;
@@ -58,7 +61,6 @@ const Navbar = () => {
     } else {
       window.location.href = `/#${id}`;
     }
-    setIsOpen(false); 
   };
 
   const NavLinks = () => (
@@ -66,6 +68,10 @@ const Navbar = () => {
       <a href="#live-match" onClick={(e) => scrollToSection(e, 'live-match')} className="text-slate-300 hover:text-white font-bold transition">Live Match</a>
       <a href="#posts" onClick={(e) => scrollToSection(e, 'posts')} className="text-slate-300 hover:text-white font-bold transition">Posts</a>
       <a href="#winners" onClick={(e) => scrollToSection(e, 'winners')} className="text-slate-300 hover:text-white font-bold transition">Winners</a>
+      
+      {/* Terms Menu Link එක */}
+      <Link to="/terms" onClick={() => setIsOpen(false)} className="text-slate-300 hover:text-neon-blue font-bold transition">Terms</Link>
+      
       <a href="#vip-packages" onClick={(e) => scrollToSection(e, 'vip-packages')} className="text-cricket-gold font-black uppercase tracking-wider relative group">
         VIP Pass
         <span className="absolute -inset-1 bg-cricket-gold blur-md opacity-40 group-hover:opacity-100 transition duration-300"></span>
@@ -110,7 +116,6 @@ const Navbar = () => {
               <div className="flex items-center gap-3 bg-slate-800/80 backdrop-blur-md pl-2 pr-4 py-1.5 rounded-full border border-slate-700 relative z-20">
                 <div className="relative flex items-center justify-center">
                   
-                  {/* Profile Pic Ring / VIP Glow */}
                   <div className={`rounded-full p-[2px] transition-all duration-500 ${isVip ? 'bg-gradient-to-tr from-yellow-500 via-cricket-gold to-yellow-200 shadow-[0_0_20px_rgba(255,215,0,0.8)]' : 'bg-neon-blue'}`}>
                       <img 
                         src={getProfilePic()} 

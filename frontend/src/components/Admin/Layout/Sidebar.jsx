@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-// Added FiShield to the import list below!
-import { FiHome, FiEdit3, FiMessageSquare, FiStar, FiShoppingCart, FiAward, FiLogOut, FiShield } from 'react-icons/fi';
+import { FiHome, FiEdit3, FiMessageSquare, FiStar, FiShoppingCart, FiAward, FiLogOut, FiShield, FiSettings } from 'react-icons/fi';
 import { BiCricketBall } from 'react-icons/bi';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
@@ -13,6 +12,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { name: 'VIP Orders', path: '/admin/orders', icon: <FiShoppingCart /> },
     { name: 'Winners Workflow', path: '/admin/winners', icon: <FiAward /> },
     { name: 'Manage Admins', path: '/admin/manage-admins', icon: <FiShield /> },
+    { name: 'Manage Terms', path: '/admin/terms', icon: <FiSettings /> } // <-- මෙන්න මේක හැදුවා
   ];
 
   return (
@@ -44,7 +44,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             <NavLink
               key={index}
               to={item.path}
-              onClick={() => setIsOpen(false)} // Close on mobile click
+              onClick={() => setIsOpen(false)} 
               className={({ isActive }) =>
                 `flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-bold ${
                   isActive 

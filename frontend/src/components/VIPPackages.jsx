@@ -214,8 +214,8 @@ window.dispatchEvent(new CustomEvent('vipActivated', { detail: { uid: user.uid }
                          <FiStar className="text-yellow-500 fill-current" /> {pkg.name}
                       </h3>
                       <div className="text-4xl lg:text-5xl font-black text-white drop-shadow-md mt-4">
-                          {pkg.price}
-                      </div>
+                     $ {pkg.price}
+                     </div>
                       <p className="text-yellow-500/80 text-sm mt-2 font-semibold">Cancel anytime</p>
                     </div>
                     
