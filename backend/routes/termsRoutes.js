@@ -1,33 +1,42 @@
 const express = require('express');
 const router = express.Router();
-const Terms = require('../models/Terms');
+const { createClient } = require('@supabase/supabase-js');
 
-// Get Terms
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
 router.get('/', async (req, res) => {
     try {
-        let terms = await Terms.findOne();
-        if (!terms) {
-            terms = await Terms.create({ content: 'Welcome to Cricket Pro. These are the default terms and conditions.' });
+        const { data, error } = await supabase.from('terms').select('*').limit(1).single();
+        
+        // Table එක නැත්නම් හෝ Data නැත්නම් Crash වෙන්නේ නැතුව Default එක යවනවා
+        if (error && error.code === 'PGRST116') {
+             return res.json({ content: '["Welcome to Cricket Pro. These are the default terms and conditions."]' });
+        } else if (error) {
+             throw error;
         }
-        res.json(terms);
+
+        res.json(data);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error("Fetch Terms Error:", err);
+        res.status(500).json({ message: err.message, error: "Database error" });
     }
 });
 
-// Update Terms
 router.put('/', async (req, res) => {
     try {
-        let terms = await Terms.findOne();
-        if (terms) {
-            terms.content = req.body.content;
-            terms.updatedAt = Date.now();
-            await terms.save();
+        const { data: existingData } = await supabase.from('terms').select('id').limit(1).single();
+
+        let result;
+        if (existingData) {
+            result = await supabase.from('terms').update({ content: req.body.content, updated_at: new Date() }).eq('id', existingData.id).select();
         } else {
-            terms = await Terms.create({ content: req.body.content });
+            result = await supabase.from('terms').insert([{ content: req.body.content }]).select();
         }
-        res.json({ success: true, message: 'Terms updated successfully!', terms });
+
+        if (result.error) throw result.error;
+        res.json({ success: true, message: 'Terms updated successfully!' });
     } catch (err) {
+        console.error("Update Terms Error:", err);
         res.status(500).json({ message: err.message });
     }
 });
