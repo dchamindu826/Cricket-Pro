@@ -23,6 +23,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/packages', packageRoutes);
 app.use('/api/winners', require('./routes/winners'));
 app.use('/api/admin', adminRoutes); // අලුතින් එකතු කළා
+app.use('/api/terms', require('./routes/termsRoutes'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
