@@ -14,15 +14,12 @@ const VIPPackages = () => {
   const [selectedFile, setSelectedFile] = useState(null); 
   const [previewUrl, setPreviewUrl] = useState('');
 
-  // VIP States
   const [isVip, setIsVip] = useState(false);
   const [expiryDate, setExpiryDate] = useState('');
 
-  // 1. Check VIP Status based on Logged-in User
   useEffect(() => {
     const checkVipStatus = () => {
         if (user) {
-            // User ge ID ekata adala VIP data gannawa
             const vipStatus = localStorage.getItem(`is_vip_${user.uid}`) === 'true';
             const expiry = localStorage.getItem(`vip_expiry_${user.uid}`);
             
@@ -36,23 +33,20 @@ const VIPPackages = () => {
                     setIsVip(false);
                 }
             } else {
-                setIsVip(false); // User ta nattam false
+                setIsVip(false);
             }
         } else {
-            setIsVip(false); // Login wela nattam false
+            setIsVip(false);
         }
     };
-
     checkVipStatus();
-  }, [user]); // user state eka wenas weddi meka run wenawa
+  }, [user]);
 
-  // 2. Fetch Packages and listen to Auth state
   useEffect(() => {
     const fetchPackages = async () => {
       try {
         const res = await fetch('https://cricket-pro-three.vercel.app/api/packages');
         const data = await res.json();
-        // Backend එකෙන් array එකක් ආවොත් විතරක් set කරනවා, නැත්නම් හිස් array එකක් දානවා (Crash වෙන එක නවත්වන්න)
         if (Array.isArray(data)) {
             setPackages(data);
         } else {
@@ -71,11 +65,14 @@ const VIPPackages = () => {
     return () => unsubscribe();
   }, []);
 
-  const handleCheckoutClick = async (pkg) => {
+  // 🔴 මෙන්න මේකයි අපි වෙනස් කරේ (e.stopPropagation දැම්මා)
+  const handleCheckoutClick = async (e, pkg) => {
+    e.preventDefault();
+    e.stopPropagation(); // Ad එකට Click එක හොරකම් කරන්න දෙන්නේ නෑ
+
     if (!user) {
         try {
             await signInWithPopup(auth, provider);
-            // Login unata passe auth.onAuthStateChanged eken user wa set wenawa
             setSelectedPackage(pkg);
         } catch (error) {
             console.error("Login failed", error);
@@ -121,14 +118,12 @@ const VIPPackages = () => {
             setSelectedFile(null);
             setPreviewUrl('');
             
-            // Note: Eththatama nam meka admin approve kalama wenne.
-            // Danata order eka dapu gaman test karanna active karanawa
             const nextMonth = new Date();
             nextMonth.setMonth(nextMonth.getMonth() + 1); 
-localStorage.setItem(`is_vip_${user.uid}`, 'true');
-localStorage.setItem(`vip_expiry_${user.uid}`, nextMonth.toISOString());
+            localStorage.setItem(`is_vip_${user.uid}`, 'true');
+            localStorage.setItem(`vip_expiry_${user.uid}`, nextMonth.toISOString());
 
-window.dispatchEvent(new CustomEvent('vipActivated', { detail: { uid: user.uid } }));
+            window.dispatchEvent(new CustomEvent('vipActivated', { detail: { uid: user.uid } }));
             
         } else {
             alert("Error: " + data.message);
@@ -143,7 +138,7 @@ window.dispatchEvent(new CustomEvent('vipActivated', { detail: { uid: user.uid }
   const CopyItem = ({ label, value }) => (
     <div className="flex justify-between items-center bg-[#020c1b] p-3 rounded-lg border border-slate-700 mb-2">
         <div><p className="text-xs text-slate-400">{label}</p><p className="text-sm font-bold text-white">{value}</p></div>
-        <button onClick={() => copyToClipboard(value)} className="text-slate-400 hover:text-neon-blue"><FiCopy /></button>
+        <button onClick={(e) => { e.stopPropagation(); copyToClipboard(value); }} className="text-slate-400 hover:text-neon-blue"><FiCopy /></button>
     </div>
   );
 
@@ -214,8 +209,8 @@ window.dispatchEvent(new CustomEvent('vipActivated', { detail: { uid: user.uid }
                          <FiStar className="text-yellow-500 fill-current" /> {pkg.name}
                       </h3>
                       <div className="text-4xl lg:text-5xl font-black text-white drop-shadow-md mt-4">
-                     $ {pkg.price}
-                     </div>
+                          $ {pkg.price}
+                      </div>
                       <p className="text-yellow-500/80 text-sm mt-2 font-semibold">Cancel anytime</p>
                     </div>
                     
@@ -233,9 +228,10 @@ window.dispatchEvent(new CustomEvent('vipActivated', { detail: { uid: user.uid }
                               <p className="text-center text-xs text-slate-400 mt-3">Valid until: {expiryDate}</p>
                           </div>
                         ) : (
+                          // 🔴 Subscribe Button එකට click event එක යැව්වා
                           <button 
-                              onClick={() => handleCheckoutClick(pkg)}
-                              className="w-full bg-gradient-to-r from-cricket-gold to-yellow-600 text-black font-black py-4 rounded-xl shadow-[0_0_20px_rgba(255,215,0,0.4)] hover:shadow-[0_0_30px_rgba(255,215,0,0.6)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                              onClick={(e) => handleCheckoutClick(e, pkg)}
+                              className="w-full bg-gradient-to-r from-cricket-gold to-yellow-600 text-black font-black py-4 rounded-xl shadow-[0_0_20px_rgba(255,215,0,0.4)] hover:shadow-[0_0_30px_rgba(255,215,0,0.6)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2 relative z-10"
                           >
                               <FiZap size={20} /> Subscribe Now
                           </button>
@@ -245,13 +241,16 @@ window.dispatchEvent(new CustomEvent('vipActivated', { detail: { uid: user.uid }
               ))}
           </div>
       ) : (
-          /* ================= PAYMENT MODAL / SECTION ================= */
-          <div className="bg-[#0b1b36] p-6 md:p-8 rounded-3xl border border-neon-blue/50 max-w-2xl mx-auto shadow-2xl relative">
-              <button onClick={() => setSelectedPackage(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-2">
+          /* ================= PAYMENT MODAL ================= */
+          <div 
+             className="bg-[#0b1b36] p-6 md:p-8 rounded-3xl border border-neon-blue/50 max-w-2xl mx-auto shadow-2xl relative"
+             onClick={(e) => e.stopPropagation()} // 🔴 Modal එක ඇතුලේ clicks වලට Ads එන එක නැවැත්තුවා
+          >
+              <button onClick={(e) => { e.stopPropagation(); setSelectedPackage(null); }} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-2 z-10">
                   <FiX size={20}/>
               </button>
               
-              <h3 className="text-xl font-bold text-white mb-2 border-b border-slate-700 pb-4 pr-8">Checkout: {selectedPackage.name} ({selectedPackage.price})</h3>
+              <h3 className="text-xl font-bold text-white mb-2 border-b border-slate-700 pb-4 pr-8">Checkout: {selectedPackage.name} (${selectedPackage.price})</h3>
               <p className="text-sm text-slate-400 mb-6">Logged in as: <span className="text-white font-bold">{user?.email}</span></p>
               
               <div className="space-y-6">
@@ -268,19 +267,19 @@ window.dispatchEvent(new CustomEvent('vipActivated', { detail: { uid: user.uid }
                       {previewUrl ? (
                           <div className="mb-4">
                               <img src={previewUrl} alt="Preview" className="w-48 h-auto max-h-48 object-contain rounded-lg border border-neon-blue mx-auto shadow-lg" />
-                              <button onClick={() => {setSelectedFile(null); setPreviewUrl('');}} className="mt-2 text-red-400 text-xs font-bold underline">Remove Image</button>
+                              <button onClick={(e) => { e.stopPropagation(); setSelectedFile(null); setPreviewUrl('');}} className="mt-2 text-red-400 text-xs font-bold underline relative z-10">Remove Image</button>
                           </div>
                       ) : (
-                          <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold flex justify-center items-center gap-2 mb-4 max-w-xs mx-auto transition">
+                          <label onClick={(e) => e.stopPropagation()} className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold flex justify-center items-center gap-2 mb-4 max-w-xs mx-auto transition relative z-10">
                               <FiUploadCloud /> Choose Image
-                              <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} disabled={uploading}/>
+                              <input type="file" className="hidden" accept="image/*" onChange={(e) => { e.stopPropagation(); handleFileSelect(e); }} disabled={uploading}/>
                           </label>
                       )}
 
                       <button 
-                          onClick={handleFileUpload} 
+                          onClick={(e) => { e.stopPropagation(); handleFileUpload(); }} 
                           disabled={!selectedFile || uploading}
-                          className={`w-full max-w-xs font-black py-3 rounded-xl transition-all mx-auto block ${
+                          className={`w-full max-w-xs font-black py-3 rounded-xl transition-all mx-auto block relative z-10 ${
                               (!selectedFile || uploading) ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-neon-blue to-[#00b3cc] text-[#020c1b] hover:shadow-[0_0_20px_rgba(100,255,218,0.4)]'
                           }`}
                       >
