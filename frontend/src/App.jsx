@@ -26,21 +26,25 @@ import LiveComments from './components/Admin/Pages/LiveComments';
 import ManageAdmins from './components/Admin/Pages/ManageAdmins';
 import ManageTerms from './components/Admin/Pages/ManageTerms'; // <-- Error එක හදන්න import කළා
 
-// Main Frontend Layout
+// Main Frontend Layout (App.jsx එකේ මේ කොටස විතරක් වෙනස් කරන්න)
 const MainSite = () => (
-  <div className="min-h-screen bg-cricket-dark font-sans text-slate-200 relative">
+  <div className="min-h-screen bg-cricket-dark font-sans text-slate-200 relative overflow-x-hidden">
     <Navbar />
     <HeroSection />
-    <NativeBanner />
+    <NativeBanner /> {/* Hero එකට යටින් Ad එක */}
     <Scoreboard />
     <LiveStream />
-    <NativeBanner />
+    <NativeBanner /> {/* Live Stream එකට යටින් Ad එක */}
     <PostSection />
     <WinnersSection />
-    <VIPPackages />
-    <NativeBanner />
+    
+    {/* VIP Section එක (මේකෙ යටින් තිබ්බ Ad එක අයින් කරලා තියෙන්නේ) */}
+    <div className="relative z-[80]">
+        <VIPPackages />
+    </div>
+
     <WhatsAppBtn />
-    <TermsWidget /> {/* <-- පැත්තෙන් එන Terms Widget එක */}
+    <TermsWidget />
   </div>
 );
 

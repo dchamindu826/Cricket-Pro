@@ -17,6 +17,14 @@ const VIPPackages = () => {
   const [isVip, setIsVip] = useState(false);
   const [expiryDate, setExpiryDate] = useState('');
 
+  const stopAdHijack = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.nativeEvent && e.nativeEvent.stopImmediatePropagation) {
+        e.nativeEvent.stopImmediatePropagation();
+    }
+  };
+
   useEffect(() => {
     const checkVipStatus = () => {
         if (user) {
@@ -47,33 +55,26 @@ const VIPPackages = () => {
       try {
         const res = await fetch('https://cricket-pro-three.vercel.app/api/packages');
         const data = await res.json();
-        if (Array.isArray(data)) {
-            setPackages(data);
-        } else {
-            setPackages([]);
-        }
+        if (Array.isArray(data)) setPackages(data);
+        else setPackages([]);
       } catch (error) {
-        console.error("Error fetching packages", error);
         setPackages([]);
       }
     };
     fetchPackages();
 
-    const unsubscribe = auth.onAuthStateChanged((u) => {
-        setUser(u);
-    });
+    const unsubscribe = auth.onAuthStateChanged((u) => setUser(u));
     return () => unsubscribe();
   }, []);
 
   const handleCheckoutClick = async (e, pkg) => {
-    e.preventDefault();
+    stopAdHijack(e);
     if (!user) {
         try {
             await signInWithPopup(auth, provider);
             setSelectedPackage(pkg);
         } catch (error) {
             console.error("Login failed", error);
-            alert("Please login first to subscribe!");
         }
     } else {
         setSelectedPackage(pkg);
@@ -122,7 +123,6 @@ const VIPPackages = () => {
             localStorage.setItem(`vip_expiry_${user.uid}`, nextMonth.toISOString());
 
             window.dispatchEvent(new CustomEvent('vipActivated', { detail: { uid: user.uid } }));
-            
         } else {
             alert("Error: " + data.message);
         }
@@ -136,12 +136,12 @@ const VIPPackages = () => {
   const CopyItem = ({ label, value }) => (
     <div className="flex justify-between items-center bg-[#020c1b] p-3 rounded-lg border border-slate-700 mb-2">
         <div><p className="text-xs text-slate-400">{label}</p><p className="text-sm font-bold text-white">{value}</p></div>
-        <button onClick={() => copyToClipboard(value)} className="text-slate-400 hover:text-neon-blue relative z-50"><FiCopy /></button>
+        <button onClick={() => copyToClipboard(value)} className="text-slate-400 hover:text-neon-blue relative z-[9999]"><FiCopy /></button>
     </div>
   );
 
   const FeatureList = ({ features, isGold }) => (
-    <ul className="space-y-4 mb-8 flex-1">
+    <ul className="space-y-4 mb-8 flex-1 relative z-10">
       {features.map((feature, idx) => (
         <li key={idx} className="flex items-start gap-3">
           <div className={`mt-1 p-1 rounded-full shrink-0 ${isGold ? 'bg-cricket-gold/20 text-cricket-gold' : 'bg-slate-700 text-neon-blue'}`}>
@@ -154,8 +154,8 @@ const VIPPackages = () => {
   );
 
   return (
-    <div id="vip-packages" className="max-w-7xl mx-auto px-4 my-24 relative z-20">
-      <div className="text-center mb-16">
+    <div id="vip-packages" className="max-w-7xl mx-auto px-4 my-24 relative z-[90]">
+      <div className="text-center mb-16 relative z-10">
           <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-[#00b3cc] mb-4 uppercase tracking-wider">
             Choose Your Pass
           </h2>
@@ -163,10 +163,10 @@ const VIPPackages = () => {
       </div>
 
       {/* ================= PACKAGES GRID ================= */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${packages && packages.length > 0 ? 'lg:grid-cols-3' : ''} gap-8 items-stretch max-w-6xl mx-auto`}>
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${packages && packages.length > 0 ? 'lg:grid-cols-3' : ''} gap-8 items-stretch max-w-6xl mx-auto relative z-[95]`}>
           
-          <div className="bg-[#0b1b36] border border-slate-700 rounded-3xl p-8 flex flex-col hover:border-slate-500 transition-all duration-300 h-full relative z-10">
-            <div className="mb-8">
+          <div className="bg-[#0b1b36] border border-slate-700 rounded-3xl p-8 flex flex-col hover:border-slate-500 transition-all duration-300 h-full relative z-[95]">
+            <div className="mb-8 relative z-10">
               <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
                  <FiShield className="text-slate-400" /> Standard User
               </h3>
@@ -179,12 +179,11 @@ const VIPPackages = () => {
                features={[
                   "Watch live cricket streams",
                   "Participate in live predictions",
-                  "Standard display name in comments",
-                  "Eligible for basic rewards"
+                  "Standard display name in comments"
                ]} 
             />
             
-            <div className="w-full mt-auto pt-4">
+            <div className="w-full mt-auto pt-4 relative z-[9999]">
                 <button disabled className="w-full bg-slate-800 text-slate-400 font-bold py-4 rounded-xl cursor-not-allowed">
                   Current Plan
                 </button>
@@ -192,15 +191,15 @@ const VIPPackages = () => {
           </div>
 
           {Array.isArray(packages) && packages.length > 0 && packages.map((pkg, index) => (
-              <div key={pkg.id || index} className="bg-gradient-to-b from-[#1a1500] to-[#0b1b36] border-2 border-cricket-gold rounded-3xl p-8 flex flex-col shadow-[0_20px_50px_rgba(255,215,0,0.15)] relative h-full z-10">
+              <div key={pkg.id || index} className="bg-gradient-to-b from-[#1a1500] to-[#0b1b36] border-2 border-cricket-gold rounded-3xl p-8 flex flex-col shadow-[0_20px_50px_rgba(255,215,0,0.15)] relative h-full z-[95]">
                 
                 {index === 0 && (
-                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-yellow-400 to-cricket-gold text-black px-6 py-1.5 rounded-full text-sm font-black uppercase tracking-widest shadow-lg flex items-center gap-2 whitespace-nowrap">
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-yellow-400 to-cricket-gold text-black px-6 py-1.5 rounded-full text-sm font-black uppercase tracking-widest shadow-lg flex items-center gap-2 whitespace-nowrap z-10">
                       <FaCrown size={16} /> Most Popular
                     </div>
                 )}
 
-                <div className="mb-8 mt-2">
+                <div className="mb-8 mt-2 relative z-10">
                   <h3 className="text-2xl font-bold text-cricket-gold mb-2 flex items-center gap-2">
                      <FiStar className="text-yellow-500 fill-current" /> {pkg.name}
                   </h3>
@@ -215,7 +214,8 @@ const VIPPackages = () => {
                    features={pkg.features || []} 
                 />
                 
-                <div className="w-full mt-auto pt-4 relative z-50">
+                {/* 🔴 මෙතන තමයි Ads block කරන්න Button එකට highest power දුන්නේ */}
+                <div className="w-full mt-auto pt-4 relative z-[9999]">
                     {isVip ? (
                       <div>
                           <button disabled className="w-full bg-green-500/20 text-green-500 border border-green-500/50 font-bold py-4 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed">
@@ -226,7 +226,7 @@ const VIPPackages = () => {
                     ) : (
                       <button 
                           onClick={(e) => handleCheckoutClick(e, pkg)}
-                          className="w-full bg-gradient-to-r from-cricket-gold to-yellow-600 text-black font-black py-4 rounded-xl shadow-[0_0_20px_rgba(255,215,0,0.4)] hover:shadow-[0_0_30px_rgba(255,215,0,0.6)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2 relative z-50"
+                          className="w-full bg-gradient-to-r from-cricket-gold to-yellow-600 text-black font-black py-4 rounded-xl shadow-[0_0_20px_rgba(255,215,0,0.4)] hover:shadow-[0_0_30px_rgba(255,215,0,0.6)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                           <FiZap size={20} /> Subscribe Now
                       </button>
@@ -238,10 +238,10 @@ const VIPPackages = () => {
 
       {/* ================= FIXED POPUP MODAL FOR CHECKOUT ================= */}
       {selectedPackage && (
-          <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/95 z-[99999] flex items-center justify-center p-4 overflow-y-auto">
               
               <div className="bg-[#0b1b36] p-6 md:p-8 rounded-3xl border border-neon-blue/50 w-full max-w-2xl shadow-2xl relative my-auto animate-fade-in-up">
-                  <button onClick={() => setSelectedPackage(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-2 z-10">
+                  <button onClick={() => setSelectedPackage(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-2 z-[99999]">
                       <FiX size={20}/>
                   </button>
                   
@@ -260,21 +260,21 @@ const VIPPackages = () => {
                           <h4 className="text-white font-bold mb-2">Upload Payment Slip</h4>
                           
                           {previewUrl ? (
-                              <div className="mb-4 relative z-50">
+                              <div className="mb-4 relative z-[99999]">
                                   <img src={previewUrl} alt="Preview" className="w-48 h-auto max-h-48 object-contain rounded-lg border border-neon-blue mx-auto shadow-lg" />
-                                  <button onClick={() => { setSelectedFile(null); setPreviewUrl('');}} className="mt-2 text-red-400 text-xs font-bold underline relative z-50">Remove Image</button>
+                                  <button onClick={() => { setSelectedFile(null); setPreviewUrl('');}} className="mt-2 text-red-400 text-xs font-bold underline cursor-pointer">Remove Image</button>
                               </div>
                           ) : (
-                              <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold flex justify-center items-center gap-2 mb-4 max-w-xs mx-auto transition relative z-50">
+                              <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold flex justify-center items-center gap-2 mb-4 max-w-xs mx-auto transition relative z-[99999]">
                                   <FiUploadCloud /> Choose Image
-                                  <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} disabled={uploading}/>
+                                  <input type="file" className="hidden" accept="image/*" onChange={(e) => { stopAdHijack(e); handleFileSelect(e); }} disabled={uploading}/>
                               </label>
                           )}
 
                           <button 
-                              onClick={handleFileUpload} 
+                              onClick={(e) => { stopAdHijack(e); handleFileUpload(); }} 
                               disabled={!selectedFile || uploading}
-                              className={`w-full max-w-xs font-black py-3 rounded-xl transition-all mx-auto block relative z-50 ${
+                              className={`w-full max-w-xs font-black py-3 rounded-xl transition-all mx-auto block relative z-[99999] cursor-pointer ${
                                   (!selectedFile || uploading) ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-neon-blue to-[#00b3cc] text-[#020c1b] hover:shadow-[0_0_20px_rgba(100,255,218,0.4)]'
                               }`}
                           >
