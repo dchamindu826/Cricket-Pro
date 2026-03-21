@@ -1,42 +1,54 @@
 import React, { useEffect, useRef } from 'react';
 
-const AdBanner = () => {
+const NativeBanner = () => {
   const bannerRef = useRef(null);
 
   useEffect(() => {
-    // ⚠️ අලුත් Monetag Banner Script එක ලැබුනම, ඒකෙ URL එක මෙතනට දාන්න.
-    // උදාහරණයක්: https://domain.com/tag.min.js
-    const monetagScriptURL = ""; 
-
-    if (monetagScriptURL && bannerRef.current && !bannerRef.current.hasChildNodes()) {
-      const script = document.createElement('script');
-      script.src = monetagScriptURL;
-      script.async = true;
-      script.setAttribute('data-cfasync', 'false');
+    if (bannerRef.current && !bannerRef.current.hasAttribute('data-ad-loaded')) {
       
-      // Script එක Container එක ඇතුලට දානවා
-      bannerRef.current.appendChild(script);
+      // 1. Adsterra වලට අවශ්‍ය Settings (atOptions) සකස් කිරීම
+      const confScript = document.createElement('script');
+      confScript.type = 'text/javascript';
+      confScript.innerHTML = `
+        atOptions = {
+          'key' : '4c2d5bf22cad3fd9a066824b28e22dd3',
+          'format' : 'iframe',
+          'height' : 50,
+          'width' : 320,
+          'params' : {}
+        };
+      `;
+      bannerRef.current.appendChild(confScript);
+
+      // 2. Adsterra Invoke Script එක Load කිරීම
+      const invokeScript = document.createElement('script');
+      invokeScript.type = 'text/javascript';
+      invokeScript.async = true;
+      invokeScript.src = '//pl28789850.effectivegatecpm.com/4c2d5bf22cad3fd9a066824b28e22dd3/invoke.js';
+      
+      bannerRef.current.appendChild(invokeScript);
+      
+      // ආයේ ආයේ Load වෙන එක නවත්වන්න Mark කරනවා
+      bannerRef.current.setAttribute('data-ad-loaded', 'true');
     }
   }, []);
 
   return (
-    <div className="w-full mx-auto my-6 md:my-8 px-4 flex justify-center overflow-hidden">
-      
-      {/* Ad එක load වෙනකම් ලස්සනට පෙන්නන්න හදපු Box එක */}
-      <div className="bg-[#0b1b36]/50 border border-slate-800 rounded-2xl min-w-[300px] min-h-[100px] md:min-h-[250px] flex items-center justify-center shadow-lg relative">
-        
-        {/* Monetag එකෙන් දෙන ID එක (උදා: id="container-12345") මේ div එකට දාන්න */}
-        <div ref={bannerRef} id="monetag-banner-container" className="relative z-10">
-            {/* Ads load වෙනකම් පෙන්නන Placeholder එක */}
-            <span className="text-slate-600 text-xs md:text-sm font-semibold tracking-widest uppercase">
+    <div className="w-full flex justify-center items-center my-6 overflow-hidden px-4">
+      {/* Ad එක මැදට ලස්සනට පෙන්නන්න හදපු Box එක */}
+      <div 
+        ref={bannerRef} 
+        className="flex justify-center bg-[#0b1b36]/30 border border-slate-800/50 rounded-lg p-2 shadow-lg min-w-[320px] min-h-[66px] relative z-10"
+      >
+        {/* Ads Load වෙනකම් විතරක් මේක පෙනේවි */}
+        {!bannerRef.current?.hasAttribute('data-ad-loaded') && (
+            <span className="text-slate-600 text-xs font-semibold tracking-widest uppercase flex items-center justify-center h-[50px]">
                 Advertisement
             </span>
-        </div>
-
+        )}
       </div>
-      
     </div>
   );
 };
 
-export default AdBanner;
+export default NativeBanner;
