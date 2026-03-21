@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom'; // 🔴 අලුතෙන් මේක import කරා
-import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../firebase';
 import { FiCheckCircle, FiCopy, FiUploadCloud, FiCheck, FiStar, FiShield, FiZap, FiX } from 'react-icons/fi';
 import { FaCrown } from 'react-icons/fa';
@@ -48,21 +46,24 @@ const VIPPackages = () => {
       } catch (error) { console.error(error); }
     };
     fetchPackages();
+    
     const unsubscribe = auth.onAuthStateChanged((u) => setUser(u));
     return () => unsubscribe();
   }, []);
 
-  const handleCheckoutClick = async (e, pkg) => {
+  // 🔴 Firebase අවුල හදපු තැන
+  const handleCheckoutClick = (e, pkg) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // ලොග් වෙලා නැත්නම් Mobile වල Popup හිරවෙන නිසා, කෙලින්ම Alert එකක් දෙනවා
     if (!user) {
-        try {
-            await signInWithPopup(auth, provider);
-            setSelectedPackage(pkg);
-        } catch (error) { console.error("Login failed", error); }
-    } else {
-        setSelectedPackage(pkg);
-    }
+        alert("Please login first using the Login button at the top menu!");
+        return; 
+    } 
+    
+    // ලොග් වෙලා නම් Modal එක ඕපන් කරනවා
+    setSelectedPackage(pkg);
   };
 
   const copyToClipboard = (text) => {
@@ -113,7 +114,7 @@ const VIPPackages = () => {
   const CopyItem = ({ label, value }) => (
     <div className="flex justify-between items-center bg-[#020c1b] p-3 rounded-lg border border-slate-700 mb-2">
         <div><p className="text-xs text-slate-400">{label}</p><p className="text-sm font-bold text-white">{value}</p></div>
-        <button onClick={() => copyToClipboard(value)} className="text-slate-400 hover:text-neon-blue"><FiCopy /></button>
+        <button onClick={() => copyToClipboard(value)} className="text-slate-400 hover:text-neon-blue cursor-pointer"><FiCopy /></button>
     </div>
   );
 
@@ -172,24 +173,26 @@ const VIPPackages = () => {
           ))}
       </div>
 
-      {/* 🔴 React Portal හරහා Modal එක කෙලින්ම Body එකට ගෙනාවා */}
-      {selectedPackage && createPortal(
-          <div className="fixed inset-0 z-[9999999] flex justify-center items-center p-4">
-              {/* Black Overlay */}
-              <div className="absolute inset-0 bg-black/95 cursor-pointer" onClick={() => setSelectedPackage(null)}></div>
+      {/* 🔴 100% Bulletproof Mobile Safe Modal 🔴 */}
+      {selectedPackage && (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100vh', zIndex: 9999999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
               
-              {/* Modal Content */}
-              <div className="bg-[#0b1b36] p-6 rounded-3xl border border-neon-blue/50 w-full max-w-xl relative z-10 max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl">
-                  <button onClick={() => setSelectedPackage(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-2">
+              {/* Black Background */}
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.95)', cursor: 'pointer' }} onClick={() => setSelectedPackage(null)}></div>
+              
+              {/* Form Content */}
+              <div style={{ backgroundColor: '#0b1b36', padding: '24px', borderRadius: '24px', width: '100%', maxWidth: '600px', position: 'relative', zIndex: 10, maxHeight: '85vh', overflowY: 'auto', border: '1px solid #00b3cc' }}>
+                  
+                  <button onClick={() => setSelectedPackage(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-2 cursor-pointer">
                       <FiX size={20}/>
                   </button>
                   
                   <h3 className="text-xl font-bold text-white mb-2 border-b border-slate-700 pb-4 pr-8">Checkout: {selectedPackage.name} (${selectedPackage.price})</h3>
-                  <p className="text-sm text-slate-400 mb-4">Logged in as: <span className="text-white font-bold">{user?.email}</span></p>
+                  <p className="text-sm text-slate-400 mb-6">Logged in as: <span className="text-white font-bold">{user?.email}</span></p>
                   
-                  <div className="space-y-5">
+                  <div className="space-y-6">
                       <div>
-                          <h4 className="text-neon-blue font-bold mb-2">🏦 Bank Transfer Details</h4>
+                          <h4 className="text-neon-blue font-bold mb-3">🏦 Bank Transfer Details</h4>
                           <CopyItem label="Bank Name" value="Commercial Bank" />
                           <CopyItem label="Account Name" value="Cricket Pro" />
                           <CopyItem label="Account Number" value="1000 2345 6789" />
@@ -201,7 +204,7 @@ const VIPPackages = () => {
                           {previewUrl ? (
                               <div className="mb-4">
                                   <img src={previewUrl} alt="Preview" className="w-full max-h-40 object-contain rounded-lg border border-neon-blue mx-auto" />
-                                  <button onClick={() => { setSelectedFile(null); setPreviewUrl('');}} className="mt-3 text-red-400 text-xs font-bold underline px-4 py-2">Remove Image</button>
+                                  <button onClick={() => { setSelectedFile(null); setPreviewUrl('');}} className="mt-3 text-red-400 text-xs font-bold underline px-4 py-2 cursor-pointer">Remove Image</button>
                               </div>
                           ) : (
                               <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold flex justify-center items-center gap-2 mb-4 mx-auto transition">
@@ -213,7 +216,7 @@ const VIPPackages = () => {
                           <button 
                               onClick={handleFileUpload} 
                               disabled={!selectedFile || uploading}
-                              className={`w-full font-black py-4 rounded-xl transition-all mx-auto block mt-2 ${
+                              className={`w-full font-black py-4 rounded-xl transition-all mx-auto block mt-2 cursor-pointer ${
                                   (!selectedFile || uploading) ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-neon-blue to-[#00b3cc] text-[#020c1b] shadow-lg'
                               }`}
                           >
@@ -222,8 +225,7 @@ const VIPPackages = () => {
                       </div>
                   </div>
               </div>
-          </div>,
-          document.body // 🔴 Modal එක කෙලින්ම Body එකටම attach වෙනවා
+          </div>
       )}
     </div>
   );
