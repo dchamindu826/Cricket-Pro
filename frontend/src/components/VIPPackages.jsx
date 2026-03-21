@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom'; // 🔴 අලුතෙන් මේක import කරා
 import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../firebase';
 import { FiCheckCircle, FiCopy, FiUploadCloud, FiCheck, FiStar, FiShield, FiZap, FiX } from 'react-icons/fi';
@@ -17,14 +18,6 @@ const VIPPackages = () => {
   const [isVip, setIsVip] = useState(false);
   const [expiryDate, setExpiryDate] = useState('');
 
-  const stopAdHijack = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.nativeEvent && e.nativeEvent.stopImmediatePropagation) {
-        e.nativeEvent.stopImmediatePropagation();
-    }
-  };
-
   useEffect(() => {
     const checkVipStatus = () => {
         if (user) {
@@ -40,12 +33,8 @@ const VIPPackages = () => {
                     localStorage.removeItem(`vip_expiry_${user.uid}`);
                     setIsVip(false);
                 }
-            } else {
-                setIsVip(false);
-            }
-        } else {
-            setIsVip(false);
-        }
+            } else { setIsVip(false); }
+        } else { setIsVip(false); }
     };
     checkVipStatus();
   }, [user]);
@@ -56,26 +45,21 @@ const VIPPackages = () => {
         const res = await fetch('https://cricket-pro-three.vercel.app/api/packages');
         const data = await res.json();
         if (Array.isArray(data)) setPackages(data);
-        else setPackages([]);
-      } catch (error) {
-        setPackages([]);
-      }
+      } catch (error) { console.error(error); }
     };
     fetchPackages();
-
     const unsubscribe = auth.onAuthStateChanged((u) => setUser(u));
     return () => unsubscribe();
   }, []);
 
   const handleCheckoutClick = async (e, pkg) => {
-    stopAdHijack(e);
+    e.preventDefault();
+    e.stopPropagation();
     if (!user) {
         try {
             await signInWithPopup(auth, provider);
             setSelectedPackage(pkg);
-        } catch (error) {
-            console.error("Login failed", error);
-        }
+        } catch (error) { console.error("Login failed", error); }
     } else {
         setSelectedPackage(pkg);
     }
@@ -98,7 +82,6 @@ const VIPPackages = () => {
   const handleFileUpload = async () => {
     if (!selectedFile) return alert("Please select an image first.");
     setUploading(true);
-
     const formData = new FormData();
     formData.append('slipImage', selectedFile);
     formData.append('userName', user.displayName);
@@ -107,8 +90,7 @@ const VIPPackages = () => {
 
     try {
         const response = await fetch('https://cricket-pro-three.vercel.app/api/orders/create', {
-            method: 'POST',
-            body: formData
+            method: 'POST', body: formData
         });
         const data = await response.json();
         if (data.success) {
@@ -121,113 +103,67 @@ const VIPPackages = () => {
             nextMonth.setMonth(nextMonth.getMonth() + 1); 
             localStorage.setItem(`is_vip_${user.uid}`, 'true');
             localStorage.setItem(`vip_expiry_${user.uid}`, nextMonth.toISOString());
-
             window.dispatchEvent(new CustomEvent('vipActivated', { detail: { uid: user.uid } }));
-        } else {
-            alert("Error: " + data.message);
-        }
+        } else { alert("Error: " + data.message); }
     } catch (error) {
         alert("Error uploading slip.");
-    } finally {
-        setUploading(false);
-    }
+    } finally { setUploading(false); }
   };
 
   const CopyItem = ({ label, value }) => (
     <div className="flex justify-between items-center bg-[#020c1b] p-3 rounded-lg border border-slate-700 mb-2">
         <div><p className="text-xs text-slate-400">{label}</p><p className="text-sm font-bold text-white">{value}</p></div>
-        <button onClick={() => copyToClipboard(value)} className="text-slate-400 hover:text-neon-blue relative z-[9999]"><FiCopy /></button>
+        <button onClick={() => copyToClipboard(value)} className="text-slate-400 hover:text-neon-blue"><FiCopy /></button>
     </div>
   );
 
-  const FeatureList = ({ features, isGold }) => (
-    <ul className="space-y-4 mb-8 flex-1 relative z-10">
-      {features.map((feature, idx) => (
-        <li key={idx} className="flex items-start gap-3">
-          <div className={`mt-1 p-1 rounded-full shrink-0 ${isGold ? 'bg-cricket-gold/20 text-cricket-gold' : 'bg-slate-700 text-neon-blue'}`}>
-             <FiCheck size={14} className="font-bold" />
-          </div>
-          <span className="text-slate-300 text-sm leading-relaxed">{feature}</span>
-        </li>
-      ))}
-    </ul>
-  );
-
   return (
-    <div id="vip-packages" className="max-w-7xl mx-auto px-4 my-24 relative z-[90]">
-      <div className="text-center mb-16 relative z-10">
+    <div id="vip-packages" className="max-w-7xl mx-auto px-4 my-24 relative z-20">
+      <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-[#00b3cc] mb-4 uppercase tracking-wider">
             Choose Your Pass
           </h2>
           <p className="text-slate-400 max-w-2xl mx-auto text-lg">Join the VIP club to increase your winning chances and get exclusive perks.</p>
       </div>
 
-      {/* ================= PACKAGES GRID ================= */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${packages && packages.length > 0 ? 'lg:grid-cols-3' : ''} gap-8 items-stretch max-w-6xl mx-auto relative z-[95]`}>
-          
-          <div className="bg-[#0b1b36] border border-slate-700 rounded-3xl p-8 flex flex-col hover:border-slate-500 transition-all duration-300 h-full relative z-[95]">
-            <div className="mb-8 relative z-10">
-              <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                 <FiShield className="text-slate-400" /> Standard User
-              </h3>
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${packages && packages.length > 0 ? 'lg:grid-cols-3' : ''} gap-8 max-w-6xl mx-auto`}>
+          <div className="bg-[#0b1b36] border border-slate-700 rounded-3xl p-8 flex flex-col h-full">
+            <div className="mb-8">
+              <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2"><FiShield className="text-slate-400" /> Standard</h3>
               <div className="text-4xl font-black text-white mt-4">Free</div>
-              <p className="text-slate-500 text-sm mt-2">Always free for everyone</p>
             </div>
-            
-            <FeatureList 
-               isGold={false}
-               features={[
-                  "Watch live cricket streams",
-                  "Participate in live predictions",
-                  "Standard display name in comments"
-               ]} 
-            />
-            
-            <div className="w-full mt-auto pt-4 relative z-[9999]">
-                <button disabled className="w-full bg-slate-800 text-slate-400 font-bold py-4 rounded-xl cursor-not-allowed">
-                  Current Plan
-                </button>
+            <ul className="space-y-4 mb-8 flex-1">
+              <li className="flex items-start gap-3"><FiCheck className="text-neon-blue mt-1"/> <span className="text-slate-300">Watch live streams</span></li>
+              <li className="flex items-start gap-3"><FiCheck className="text-neon-blue mt-1"/> <span className="text-slate-300">Live predictions</span></li>
+            </ul>
+            <div className="w-full mt-auto pt-4">
+                <button disabled className="w-full bg-slate-800 text-slate-400 font-bold py-4 rounded-xl cursor-not-allowed">Current Plan</button>
             </div>
           </div>
 
           {Array.isArray(packages) && packages.length > 0 && packages.map((pkg, index) => (
-              <div key={pkg.id || index} className="bg-gradient-to-b from-[#1a1500] to-[#0b1b36] border-2 border-cricket-gold rounded-3xl p-8 flex flex-col shadow-[0_20px_50px_rgba(255,215,0,0.15)] relative h-full z-[95]">
-                
+              <div key={pkg.id || index} className="bg-gradient-to-b from-[#1a1500] to-[#0b1b36] border-2 border-cricket-gold rounded-3xl p-8 flex flex-col shadow-lg relative h-full">
                 {index === 0 && (
-                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-yellow-400 to-cricket-gold text-black px-6 py-1.5 rounded-full text-sm font-black uppercase tracking-widest shadow-lg flex items-center gap-2 whitespace-nowrap z-10">
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-yellow-400 to-cricket-gold text-black px-6 py-1.5 rounded-full text-sm font-black uppercase tracking-widest shadow-lg flex items-center gap-2 whitespace-nowrap">
                       <FaCrown size={16} /> Most Popular
                     </div>
                 )}
-
-                <div className="mb-8 mt-2 relative z-10">
-                  <h3 className="text-2xl font-bold text-cricket-gold mb-2 flex items-center gap-2">
-                     <FiStar className="text-yellow-500 fill-current" /> {pkg.name}
-                  </h3>
-                  <div className="text-4xl lg:text-5xl font-black text-white drop-shadow-md mt-4">
-                      $ {pkg.price}
-                  </div>
-                  <p className="text-yellow-500/80 text-sm mt-2 font-semibold">Cancel anytime</p>
+                <div className="mb-8 mt-2">
+                  <h3 className="text-2xl font-bold text-cricket-gold mb-2 flex items-center gap-2"><FiStar className="text-yellow-500" /> {pkg.name}</h3>
+                  <div className="text-4xl font-black text-white mt-4">$ {pkg.price}</div>
                 </div>
-                
-                <FeatureList 
-                   isGold={true}
-                   features={pkg.features || []} 
-                />
-                
-                {/* 🔴 මෙතන තමයි Ads block කරන්න Button එකට highest power දුන්නේ */}
-                <div className="w-full mt-auto pt-4 relative z-[9999]">
+                <ul className="space-y-4 mb-8 flex-1">
+                  {pkg.features?.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <FiCheck className="text-cricket-gold mt-1"/> <span className="text-slate-300 text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="w-full mt-auto pt-4">
                     {isVip ? (
-                      <div>
-                          <button disabled className="w-full bg-green-500/20 text-green-500 border border-green-500/50 font-bold py-4 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed">
-                              <FiCheckCircle size={20} /> Active Membership
-                          </button>
-                          <p className="text-center text-xs text-slate-400 mt-3">Valid until: {expiryDate}</p>
-                      </div>
+                      <button disabled className="w-full bg-green-500/20 text-green-500 font-bold py-4 rounded-xl cursor-not-allowed flex justify-center gap-2"><FiCheckCircle size={20}/> Active Membership</button>
                     ) : (
-                      <button 
-                          onClick={(e) => handleCheckoutClick(e, pkg)}
-                          className="w-full bg-gradient-to-r from-cricket-gold to-yellow-600 text-black font-black py-4 rounded-xl shadow-[0_0_20px_rgba(255,215,0,0.4)] hover:shadow-[0_0_30px_rgba(255,215,0,0.6)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      >
+                      <button onClick={(e) => handleCheckoutClick(e, pkg)} className="w-full bg-gradient-to-r from-cricket-gold to-yellow-600 text-black font-black py-4 rounded-xl shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer">
                           <FiZap size={20} /> Subscribe Now
                       </button>
                     )}
@@ -236,54 +172,58 @@ const VIPPackages = () => {
           ))}
       </div>
 
-      {/* ================= FIXED POPUP MODAL FOR CHECKOUT ================= */}
-      {selectedPackage && (
-          <div className="fixed inset-0 bg-black/95 z-[99999] flex items-center justify-center p-4 overflow-y-auto">
+      {/* 🔴 React Portal හරහා Modal එක කෙලින්ම Body එකට ගෙනාවා */}
+      {selectedPackage && createPortal(
+          <div className="fixed inset-0 z-[9999999] flex justify-center items-center p-4">
+              {/* Black Overlay */}
+              <div className="absolute inset-0 bg-black/95 cursor-pointer" onClick={() => setSelectedPackage(null)}></div>
               
-              <div className="bg-[#0b1b36] p-6 md:p-8 rounded-3xl border border-neon-blue/50 w-full max-w-2xl shadow-2xl relative my-auto animate-fade-in-up">
-                  <button onClick={() => setSelectedPackage(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-2 z-[99999]">
+              {/* Modal Content */}
+              <div className="bg-[#0b1b36] p-6 rounded-3xl border border-neon-blue/50 w-full max-w-xl relative z-10 max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl">
+                  <button onClick={() => setSelectedPackage(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-2">
                       <FiX size={20}/>
                   </button>
                   
                   <h3 className="text-xl font-bold text-white mb-2 border-b border-slate-700 pb-4 pr-8">Checkout: {selectedPackage.name} (${selectedPackage.price})</h3>
-                  <p className="text-sm text-slate-400 mb-6">Logged in as: <span className="text-white font-bold">{user?.email}</span></p>
+                  <p className="text-sm text-slate-400 mb-4">Logged in as: <span className="text-white font-bold">{user?.email}</span></p>
                   
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                       <div>
-                          <h4 className="text-neon-blue font-bold mb-3">🏦 Bank Transfer Details</h4>
+                          <h4 className="text-neon-blue font-bold mb-2">🏦 Bank Transfer Details</h4>
                           <CopyItem label="Bank Name" value="Commercial Bank" />
                           <CopyItem label="Account Name" value="Cricket Pro" />
                           <CopyItem label="Account Number" value="1000 2345 6789" />
                       </div>
                       
-                      <div className="bg-[#050f20] p-6 rounded-xl border border-slate-700 border-dashed text-center">
-                          <h4 className="text-white font-bold mb-2">Upload Payment Slip</h4>
+                      <div className="bg-[#050f20] p-5 rounded-xl border border-slate-700 border-dashed text-center">
+                          <h4 className="text-white font-bold mb-3">Upload Payment Slip</h4>
                           
                           {previewUrl ? (
-                              <div className="mb-4 relative z-[99999]">
-                                  <img src={previewUrl} alt="Preview" className="w-48 h-auto max-h-48 object-contain rounded-lg border border-neon-blue mx-auto shadow-lg" />
-                                  <button onClick={() => { setSelectedFile(null); setPreviewUrl('');}} className="mt-2 text-red-400 text-xs font-bold underline cursor-pointer">Remove Image</button>
+                              <div className="mb-4">
+                                  <img src={previewUrl} alt="Preview" className="w-full max-h-40 object-contain rounded-lg border border-neon-blue mx-auto" />
+                                  <button onClick={() => { setSelectedFile(null); setPreviewUrl('');}} className="mt-3 text-red-400 text-xs font-bold underline px-4 py-2">Remove Image</button>
                               </div>
                           ) : (
-                              <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold flex justify-center items-center gap-2 mb-4 max-w-xs mx-auto transition relative z-[99999]">
+                              <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold flex justify-center items-center gap-2 mb-4 mx-auto transition">
                                   <FiUploadCloud /> Choose Image
-                                  <input type="file" className="hidden" accept="image/*" onChange={(e) => { stopAdHijack(e); handleFileSelect(e); }} disabled={uploading}/>
+                                  <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} disabled={uploading}/>
                               </label>
                           )}
 
                           <button 
-                              onClick={(e) => { stopAdHijack(e); handleFileUpload(); }} 
+                              onClick={handleFileUpload} 
                               disabled={!selectedFile || uploading}
-                              className={`w-full max-w-xs font-black py-3 rounded-xl transition-all mx-auto block relative z-[99999] cursor-pointer ${
-                                  (!selectedFile || uploading) ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-neon-blue to-[#00b3cc] text-[#020c1b] hover:shadow-[0_0_20px_rgba(100,255,218,0.4)]'
+                              className={`w-full font-black py-4 rounded-xl transition-all mx-auto block mt-2 ${
+                                  (!selectedFile || uploading) ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-neon-blue to-[#00b3cc] text-[#020c1b] shadow-lg'
                               }`}
                           >
-                              {uploading ? 'Uploading...' : 'Upload & Submit Order'}
+                              {uploading ? 'Uploading...' : 'Submit Order'}
                           </button>
                       </div>
                   </div>
               </div>
-          </div>
+          </div>,
+          document.body // 🔴 Modal එක කෙලින්ම Body එකටම attach වෙනවා
       )}
     </div>
   );

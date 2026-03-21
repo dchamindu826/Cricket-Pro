@@ -9,24 +9,22 @@
     <script>
       if (!window.location.pathname.startsWith('/admin')) {
         
-        // Mobile ද කියලා Check කරනවා
         var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         
-        // 1. Vignette Ad (මෙය PC වලට පමණක් Load වේ - Mobile වල හිරවෙන නිසා අයින් කර ඇත)
+        // Mobile නැත්නම් (PC වලට විතරක්) මේ Ads දෙක Load වෙනවා (Vignette & Popunder)
         if (!isMobile) {
             var vignetteAd = document.createElement('script');
             vignetteAd.dataset.zone = '10745100';
             vignetteAd.src = 'https://gizokraijaw.net/vignette.min.js';
             document.head.appendChild(vignetteAd);
+
+            var popunderAd = document.createElement('script');
+            popunderAd.dataset.zone = '10745063';
+            popunderAd.src = 'https://al5sm.com/tag.min.js';
+            document.head.appendChild(popunderAd);
         }
 
-        // 2. Monetag Onclick (Popunder) Ad (හැමෝටම)
-        var popunderAd = document.createElement('script');
-        popunderAd.dataset.zone = '10745063';
-        popunderAd.src = 'https://al5sm.com/tag.min.js';
-        document.head.appendChild(popunderAd);
-
-        // 3. Monetag In-Page Push Ad (හැමෝටම)
+        // In-Page Push එක හැමෝටම Load වෙනවා
         var inPageAd = document.createElement('script');
         inPageAd.dataset.zone = '10745105';
         inPageAd.src = 'https://nap5k.com/tag.min.js';
