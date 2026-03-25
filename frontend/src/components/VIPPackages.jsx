@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { auth, provider } from '../firebase';
 import { FiCheckCircle, FiCopy, FiUploadCloud, FiCheck, FiStar, FiShield, FiZap, FiX } from 'react-icons/fi';
 import { FaCrown } from 'react-icons/fa';
+import { signInWithPopup } from 'firebase/auth';
 
 const VIPPackages = () => {
   const [packages, setPackages] = useState([]);
@@ -52,17 +53,27 @@ const VIPPackages = () => {
   }, []);
 
   // 🔴 Firebase අවුල හදපු තැන
-  const handleCheckoutClick = (e, pkg) => {
+  const handleCheckoutClick = async (e, pkg) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // ලොග් වෙලා නැත්නම් Mobile වල Popup හිරවෙන නිසා, කෙලින්ම Alert එකක් දෙනවා
+    // User log wela nathnam kelinma Google Login popup eka pennanawa
     if (!user) {
-        alert("Please login first using the Login button at the top menu!");
+        try {
+            const result = await signInWithPopup(auth, provider);
+            if (result.user) {
+                // Login eka success unagaman kelinma checkout modal eka open wenawa
+                setSelectedPackage(pkg);
+            }
+        } catch (error) {
+            console.error("Login Error:", error);
+            // Popup eka close karoth hari internet awulak aawoth vitharak me alert eka enawa
+            alert("Cant login to the account try again please");
+        }
         return; 
     } 
     
-    // ලොග් වෙලා නම් Modal එක ඕපන් කරනවා
+    // Danatama log wela nam kelinma modal eka open karanawa
     setSelectedPackage(pkg);
   };
 
