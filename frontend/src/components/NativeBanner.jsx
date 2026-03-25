@@ -1,50 +1,33 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 
 const NativeBanner = () => {
-  const bannerRef = useRef(null);
 
   useEffect(() => {
-    // Ad එක එක පාරක් විතරක් ලෝඩ් වෙනවා කියලා තහවුරු කරන්න
-    if (bannerRef.current && !bannerRef.current.hasAttribute('data-ad-loaded')) {
-      
-      // 1. Adsterra Settings (atOptions)
-      const confScript = document.createElement('script');
-      confScript.type = 'text/javascript';
-      confScript.innerHTML = `
-        atOptions = {
-          'key' : '1288ab465f57d2cb6658be1102c9718f',
-          'format' : 'iframe',
-          'height' : 50,
-          'width' : 320,
-          'params' : {}
-        };
-      `;
-      bannerRef.current.appendChild(confScript);
+    // Adsterra බලාපොරොත්තු වෙන ID එක තියෙන Container එක හොයාගන්නවා
+    const adContainer = document.getElementById('container-ab51d3417470d9dc62ca478863f19725');
 
-      // 2. Adsterra Invoke Script (ඔයා දීපු අලුත් ලින්ක් එක)
-      const invokeScript = document.createElement('script');
-      invokeScript.type = 'text/javascript';
-      invokeScript.async = true;
-      invokeScript.src = 'https://www.highperformanceformat.com/1288ab465f57d2cb6658be1102c9718f/invoke.js';
+    // Container එක තියෙනවා නම් සහ කලින් Script එක ලෝඩ් වෙලා නැත්නම් විතරක් ලෝඩ් කරනවා
+    if (adContainer && !adContainer.hasChildNodes()) {
+      const script = document.createElement('script');
+      script.async = true;
+      script.dataset.cfasync = 'false';
+      script.src = 'https://pl28974724.profitablecpmratenetwork.com/ab51d3417470d9dc62ca478863f19725/invoke.js';
       
-      bannerRef.current.appendChild(invokeScript);
-      
-      // Mark as loaded
-      bannerRef.current.setAttribute('data-ad-loaded', 'true');
+      adContainer.appendChild(script);
     }
   }, []);
 
   return (
-    <div className="w-full flex justify-center items-center my-6 px-4">
-      {/* Container Box */}
-      <div 
-        ref={bannerRef} 
-        className="flex justify-center bg-[#0b1b36]/30 border border-slate-800/50 rounded-lg p-2 shadow-lg min-w-[336px] min-h-[66px] relative z-10 overflow-hidden"
-      >
-        {/* Placeholder - Script එක load වෙනකම් */}
-        <span className="absolute inset-0 flex items-center justify-center text-slate-600 text-[10px] font-semibold tracking-widest uppercase -z-10">
-          Advertisement
-        </span>
+    <div className="w-full flex justify-center items-center my-6 px-4 overflow-hidden">
+      {/* Mobile Optimized Box:
+        max-w-md (උපරිම පළල) දීලා තියෙන නිසා ෆෝන් වලට ලස්සනට ගැලපෙනවා.
+        වෙබ්සයිට් එකේ පාටට ගැලපෙන විදිහට Background එක දීලා තියෙනවා.
+      */}
+      <div className="w-full max-w-md bg-[#0b1b36]/30 border border-slate-800/50 rounded-xl p-2 shadow-lg min-h-[100px] flex justify-center items-center relative z-10">
+        
+        {/* Adsterra Script එකෙන් Ad එක පෙන්වන ප්‍රධාන Container එක */}
+        <div id="container-ab51d3417470d9dc62ca478863f19725" className="w-full flex justify-center"></div>
+        
       </div>
     </div>
   );
